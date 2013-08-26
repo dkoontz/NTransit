@@ -37,13 +37,14 @@ namespace Transit
 
 	public abstract class Component
 	{
-		public string Name { get; set; }
+		public string Name { get; protected set; }
 
 		[OutputPort("Errors")]
 		protected StandardOutputPort Errors;
 
-		protected Component ()
+		protected Component (string name)
 		{
+			Name = name;
 			ownedIps = new LinkedList<InformationPacket> ();
 		}
 
@@ -61,6 +62,10 @@ namespace Transit
 		{
 			ip.Owner = null;
 			ownedIps.Remove (ip);
+		}
+
+		public void CheckForClosureDueToClosedInputPorts() {
+
 		}
 
 		protected WaitForPacketOn WaitForPacketOn (params IInputPort[] ports)

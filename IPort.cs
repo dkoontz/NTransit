@@ -12,7 +12,7 @@ namespace Transit
 
 		bool HasConnection { get; }
 
-		Component Component { set; }
+		Component Component { get; set; }
 
 		bool HasComponent { get; }
 

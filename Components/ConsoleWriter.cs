@@ -8,6 +8,8 @@ namespace Transit
 		[InputPort("In")]
 		StandardInputPort data;
 
+		public ConsoleWriter(string name) : base (name) {}
+
 		public override IEnumerator Execute ()
 		{
 			InformationPacket packet;

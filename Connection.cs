@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace Transit
 {
@@ -24,8 +25,11 @@ namespace Transit
 			}
 		}
 
+		public Action<Component> NotifyWhenPacketReceived { get; set; }
+
+		public bool IsInitialInformationPacket { get; private set; }
+
 		Queue<InformationPacket> packets;
-		List<IOutputPort> senders;
 		IInputPort receiver;
 		InformationPacket initialIp;
 		bool sentInitialData;
@@ -39,17 +43,19 @@ namespace Transit
 		{
 			Capacity = capacity;
 			packets = new Queue<InformationPacket> (Capacity);
-			senders = new List<IOutputPort> (1);
 		}
 
 		public bool SendPacketIfCapacityAllows (InformationPacket ip)
 		{
+			if (IsInitialInformationPacket) throw new InvalidOperationException (string.Format ("Cannot send packet from '{0}' to connection that is an IIP", ip.Owner));
+			if (null == receiver) throw new InvalidOperationException (string.Format ("Cannot send packet from '{0}' to connection that has no reciever", ip.Owner));
 			bool hasCapacity = false;
 			lock (lockObject) {
 				if (packets.Count < Capacity) {
 					hasCapacity = true;
 					ip.Owner = this;
 					packets.Enqueue (ip);
+					if (NotifyWhenPacketReceived != null) NotifyWhenPacketReceived (receiver.Component);
 				}
 			}
 			return hasCapacity;
@@ -73,14 +79,10 @@ namespace Transit
 			this.receiver = receiver;
 		}
 
-		public void AddSender (IOutputPort sender)
-		{
-			senders.Add (sender);
-		}
-
 		public void SetInitialData (InformationPacket ip)
 		{
 			initialIp = ip;
+			IsInitialInformationPacket = true;
 		}
 	}
 }

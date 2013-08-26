@@ -12,7 +12,7 @@ namespace Transit
 
 		public bool HasConnection { get { return Connection != null; } }
 
-		public Component Component { protected get; set; }
+		public Component Component { get; set; }
 
 		public bool HasComponent { get { return Component != null; } }
 

@@ -35,6 +35,7 @@ namespace TransitTest
 		public void Full_is_reported_when_capacity_is_equal_to_number_of_packets ()
 		{
 			var connection = new Connection (2);
+			connection.SetReceiver (new StandardInputPort ());
 			var ip1 = new InformationPacket ("Test data1");
 			var ip2 = new InformationPacket ("Test data2");
 			connection.SendPacketIfCapacityAllows (ip1);
@@ -47,6 +48,7 @@ namespace TransitTest
 		public void Initial_data_is_recieved_first ()
 		{
 			var connection = new Connection ();
+			connection.SetReceiver (new StandardInputPort ());
 			var initialIp = new InformationPacket ("Initial data");
 			var normalIp = new InformationPacket ("Regular data");
 			connection.SetInitialData (initialIp);
@@ -79,6 +81,7 @@ namespace TransitTest
 		public void Sending_to_a_full_connection_returns_false ()
 		{
 			var connection = new Connection (0);
+			connection.SetReceiver (new StandardInputPort ());
 			Assert.False (connection.SendPacketIfCapacityAllows (new InformationPacket ("Test data")));
 		}
 
@@ -86,12 +89,24 @@ namespace TransitTest
 		public void Sending_to_a_connection_changes_the_packets_owner_to_the_connection ()
 		{
 			var connection = new Connection ();
+			connection.SetReceiver (new StandardInputPort ());
 			var ip = new InformationPacket ("Test data");
 			var originalOwnerObject = new object ();
 			ip.Owner = originalOwnerObject;
 			connection.SendPacketIfCapacityAllows (ip);
 			Assert.AreEqual (ip.Owner, connection);
 			Assert.AreNotEqual (ip.Owner, originalOwnerObject);
+		}
+
+		[Test]
+		public void Connection_executes_callback_when_a_packet_is_received ()
+		{
+			var connection = new Connection ();
+			connection.SetReceiver (new StandardInputPort ());
+			var callbackCalled = false;
+			connection.NotifyWhenPacketReceived += component => callbackCalled = true;
+			connection.SendPacketIfCapacityAllows (new InformationPacket ("test"));
+			Assert.True (callbackCalled);
 		}
 	}
 }

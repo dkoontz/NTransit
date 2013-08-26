@@ -12,16 +12,13 @@ namespace Transit
 		{
 			var scheduler = new Scheduler ();
 			
-			var reader = new FileReader ();
-			reader.Name = "Get File Contents";
+			var reader = new FileReader ("Get File Contents");
 			scheduler.AddComponent (reader);
 
-			var writer = new FileWriter ();
-			writer.Name = "Write File Contents";
+			var writer = new FileWriter ("Write File Contents");
 			scheduler.AddComponent (writer);
 
-			var consoleWriter = new ConsoleWriter ();
-			consoleWriter.Name = "Console Output";
+			var consoleWriter = new ConsoleWriter ("Console Output");
 			scheduler.AddComponent (consoleWriter);
 
 			scheduler.SetupPorts ();
@@ -30,35 +27,43 @@ namespace Transit
 			scheduler.Connect (reader, "Errors", consoleWriter, "In");
 			scheduler.Connect (writer, "Errors", consoleWriter, "In");
 
-			scheduler.SetInitialData (reader, "File Name", "test.txt");
+			scheduler.SetInitialData (reader, "File Name", "test1.txt");
 			scheduler.SetInitialData (writer, "File Name", "test2.txt");
 			scheduler.Go ();
 		}
 
 		List<Component> components;
-		List<Connection> connections;
+//		List<Connection> connections;
 //		LinkedList<IEnumerator> coroutines;
 		Dictionary<Component, IEnumerator> componentExecutionState;
+		LinkedList<Component> componentsThatHaveTerminated;
+		Queue<Component> componentsToAddToExecutionList;
 
 		public Scheduler ()
 		{
 			components = new List<Component> ();
-			connections = new List<Connection> ();
+//			connections = new List<Connection> ();
 //			coroutines = new LinkedList<IEnumerator<object>> ();
 			componentExecutionState = new Dictionary<Component, IEnumerator> ();
+			componentsThatHaveTerminated = new LinkedList<Component> ();
+			componentsToAddToExecutionList = new Queue<Component> ();
 		}
 
 		public void Go ()
 		{
 			foreach (var component in components) 
 			{
-				componentExecutionState[component] = component.Execute ();
+				Console.WriteLine ("component is null?: " + (component == null));
+				if (IsAutoStartComponent (component))
+				{
+					componentExecutionState[component] = component.Execute ();
+				}
 			}
 
 			while (true) 
 			{
 				System.Threading.Thread.Sleep (0);
-//				Console.WriteLine ("Tick");
+				componentsThatHaveTerminated.Clear ();
 
 				foreach (var kvp in componentExecutionState) 
 				{
@@ -74,7 +79,7 @@ namespace Transit
 
 						if (allHavePacket)
 						{
-							kvp.Value.MoveNext ();
+							if(!kvp.Value.MoveNext ()) componentsThatHaveTerminated.AddLast (kvp.Key);
 						}
 					}
 					else if (current is WaitForCapacityOn) 
@@ -88,7 +93,7 @@ namespace Transit
 
 						if (allHaveCapacity)
 						{
-							kvp.Value.MoveNext ();
+							if(!kvp.Value.MoveNext ()) componentsThatHaveTerminated.AddLast (kvp.Key);
 						}
 					}
 					else if (current is WaitForTime) 
@@ -99,8 +104,20 @@ namespace Transit
 							// call move next
 					}
 					else{
-						kvp.Value.MoveNext ();
+						if(!kvp.Value.MoveNext ()) componentsThatHaveTerminated.AddLast (kvp.Key);
 					}
+				}
+
+				foreach (var component in componentsThatHaveTerminated) 
+				{
+					Console.WriteLine ("Removing terminated component: " + component.Name + " of type: " + component.GetType());
+					componentExecutionState.Remove (component);
+				}
+
+				while(componentsToAddToExecutionList.Count > 0)
+				{
+					var component = componentsToAddToExecutionList.Dequeue ();
+					componentExecutionState[component] = component.Execute ();
 				}
 			}
 		}
@@ -144,9 +161,9 @@ namespace Transit
 				var connection = new Connection ();
 				inPort.Connection = connection;
 				connection.SetReceiver (inPort);
+				connection.NotifyWhenPacketReceived += PacketReceivedCallback;
 			} 
 			outPort.Connection = inPort.Connection;
-			inPort.Connection.AddSender (outPort);
 		}
 
 		public void SetInitialData (Component component, string portName, object value)
@@ -159,6 +176,7 @@ namespace Transit
 				var connection = new Connection ();
 				port.Connection = connection;
 				connection.SetReceiver (port);
+				connection.NotifyWhenPacketReceived += PacketReceivedCallback;
 			} 
 			port.Connection.SetInitialData (ip);
 		}
@@ -167,6 +185,24 @@ namespace Transit
 		{
 			var createMethod = GetType ().GetMethod ("InstantiatePortForField", BindingFlags.NonPublic | BindingFlags.Instance).MakeGenericMethod (field.FieldType);
 			createMethod.Invoke (this, new object[] { component, field, name });
+		}
+
+		bool IsAutoStartComponent (Component component) 
+		{
+			var autoStart = true;
+
+			foreach (var field in component.GetType ().GetFields (BindingFlags.NonPublic | BindingFlags.Instance)) 
+			{
+				foreach (Attribute attr in field.GetCustomAttributes (true)) 
+				{
+					if (attr is InputPortAttribute) 
+					{
+						autoStart = autoStart && (field.GetValue(component) as IInputPort).Connection.IsInitialInformationPacket;
+					}
+				}
+			}
+
+			return autoStart;
 		}
 
 		T InstantiatePortForField<T> (Component component, FieldInfo field, string name) where T : IPort
@@ -205,6 +241,12 @@ namespace Transit
 				return matchingField.GetValue (component) as IInputPort;
 			} catch (InvalidOperationException) {
 				throw new InvalidOperationException (string.Format ("Component '{0}' of type '{1}' does not contain an input port named '{2}'", component.Name, component.GetType (), name));
+			}
+		}
+
+		void PacketReceivedCallback(Component component) {
+			if(!componentExecutionState.ContainsKey(component)) {
+				componentsToAddToExecutionList.Enqueue (component);
 			}
 		}
 	}

@@ -50,6 +50,7 @@ namespace TransitTest
 		{
 			var port = new StandardOutputPort ();
 			port.Connection = new Connection ();
+			port.Connection.SetReceiver (new StandardInputPort ());
 
 			Assert.True (port.Connection.Empty);
 			port.Send ("Test data");
@@ -64,6 +65,7 @@ namespace TransitTest
 		{
 			var port = new StandardOutputPort ();
 			port.Connection = new Connection ();
+			port.Connection.SetReceiver (new StandardInputPort ());
 
 			Assert.True (port.Connection.Empty);
 			port.SendSequenceStart ();
@@ -79,6 +81,7 @@ namespace TransitTest
 		{
 			var port = new StandardOutputPort ();
 			port.Connection = new Connection ();
+			port.Connection.SetReceiver (new StandardInputPort ());
 
 			Assert.True (port.Connection.Empty);
 			port.SendSequenceEnd ();
@@ -94,6 +97,8 @@ namespace TransitTest
 		{
 			var port = new StandardOutputPort ();
 			port.Connection = new Connection ();
+			port.Connection.SetReceiver (new StandardInputPort ());
+
 			var component = new MockComponent ();
 			port.Component = component;
 

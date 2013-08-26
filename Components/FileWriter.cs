@@ -11,6 +11,8 @@ namespace Transit
 		[InputPort("Text To Write")]
 		StandardInputPort fileContentsPort;
 
+		public FileWriter(string name) : base(name) {}
+
 		public override IEnumerator Execute ()
 		{
 			InformationPacket packet;
@@ -26,8 +28,16 @@ namespace Transit
 
 			var contents = packet.Content as string;
 
-			using (var writer = new StreamWriter(fileName)) {
-				writer.Write (contents);
+			try
+			{
+				using (var writer = new StreamWriter(fileName)) {
+					writer.Write (contents);
+				}
+			}
+			catch(IOException ex)
+			{
+				Errors.Send (ex);
+				yield break;
 			}
 		}
 	}

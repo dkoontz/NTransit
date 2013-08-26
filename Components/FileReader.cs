@@ -11,7 +11,7 @@ namespace Transit
 		[OutputPort("File Contents")]
 		StandardOutputPort fileContentsPort;
 
-		public FileReader ()
+		public FileReader (string name) : base(name)
 		{
 			fileNamePort = new StandardInputPort ();
 			fileContentsPort = new StandardOutputPort ();
@@ -19,11 +19,8 @@ namespace Transit
 
 		public override IEnumerator Execute ()
 		{
-			Console.WriteLine ("At beginning of FileReader.Execute");
 			InformationPacket packet;
-			Console.WriteLine ("Reading in packet");
 			while (!fileNamePort.Receive(out packet)) {
-				Console.WriteLine ("waiting for packet");
 				yield return WaitForPacketOn (fileNamePort);
 			}
 
@@ -35,12 +32,11 @@ namespace Transit
 				var reader = new StreamReader (fileName);
 				contents = reader.ReadToEnd ();
 			}
-			catch(Exception e) {
-				Errors.Send (e);
+			catch(Exception ex) {
+				Errors.Send (ex);
 				yield break;
 			}
 
-			Console.WriteLine ("sending packet to out port");
 			while (!fileContentsPort.Send(contents)) {
 				yield return WaitForCapacityOn (fileContentsPort);
 			}

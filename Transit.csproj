@@ -50,6 +50,7 @@
     <Compile Include="Components\FileWriter.cs" />
     <Compile Include="IPort.cs" />
     <Compile Include="Scheduler.cs" />
+    <Compile Include="Components\ConsoleWriter.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

@@ -24,9 +24,23 @@ namespace Transit
 		}
 	}
 
+	public class WaitForTime
+	{
+		public int Milliseconds { get; private set; }
+		public int ElapsedTime { get; set; }
+
+		public WaitForTime(int milliseconds)
+		{
+			Milliseconds = milliseconds;
+		}
+	}
+
 	public abstract class Component
 	{
 		public string Name { get; set; }
+
+		[OutputPort("Errors")]
+		protected StandardOutputPort Errors;
 
 		protected Component ()
 		{

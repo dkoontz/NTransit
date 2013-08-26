@@ -19,6 +19,7 @@ namespace Transit
 
 		public override IEnumerator Execute ()
 		{
+			Console.WriteLine ("At beginning of FileReader.Execute");
 			InformationPacket packet;
 			Console.WriteLine ("Reading in packet");
 			while (!fileNamePort.Receive(out packet)) {
@@ -28,8 +29,16 @@ namespace Transit
 
 			var fileName = packet.Content as string;
 
-			var reader = new StreamReader (fileName);
-			var contents = reader.ReadToEnd ();
+			string contents;
+			try 
+			{
+				var reader = new StreamReader (fileName);
+				contents = reader.ReadToEnd ();
+			}
+			catch(Exception e) {
+				Errors.Send (e);
+				yield break;
+			}
 
 			Console.WriteLine ("sending packet to out port");
 			while (!fileContentsPort.Send(contents)) {

@@ -35,7 +35,19 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Test.cs" />
+    <Compile Include="Mocks\MockComponent.cs" />
+    <Compile Include="StandardOutputPortTests.cs" />
+    <Compile Include="StandardInputPortTests.cs" />
+    <Compile Include="ConnectionTests.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <ProjectReference Include="..\Transit.csproj">
+      <Project>{BF405721-20FF-4699-B2CF-B300C5A4CEDB}</Project>
+      <Name>Transit</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Mocks\" />
+  </ItemGroup>
 </Project>

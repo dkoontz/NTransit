@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-namespace Transit {
-	public class Connection {
+namespace Transit
+{
+	public class Connection
+	{
 		// TODO: Remove this and have a config object that can be configured at runtime
 		static int DEFAULT_CONNECTION_CAPACITY = 1;
 
@@ -14,49 +16,71 @@ namespace Transit {
 		}
 
 		public bool Empty {
-			get { return packets.Count == 0; }
+			get { 
+				if (initialIp != null) {
+					return sentInitialData && packets.Count == 0;
+				} else
+					return packets.Count == 0;
+			}
 		}
 
 		Queue<InformationPacket> packets;
 		List<IOutputPort> senders;
 		IInputPort receiver;
+		InformationPacket initialIp;
+		bool sentInitialData;
+		readonly object lockObject = new object ();
 
-		readonly object lockObject = new object();
-
-		public Connection() : this(DEFAULT_CONNECTION_CAPACITY) {}
-
-		public Connection(int capacity) {
-			Capacity = capacity;
-			packets = new Queue<InformationPacket>(Capacity);
-			senders = new List<IOutputPort>(1);
+		public Connection () : this(DEFAULT_CONNECTION_CAPACITY)
+		{
 		}
 
-		public bool SendPacketIfCapacityAllows(InformationPacket ip) {
+		public Connection (int capacity)
+		{
+			Capacity = capacity;
+			packets = new Queue<InformationPacket> (Capacity);
+			senders = new List<IOutputPort> (1);
+		}
+
+		public bool SendPacketIfCapacityAllows (InformationPacket ip)
+		{
 			bool hasCapacity = false;
-			lock(lockObject) {
-				if(packets.Count < Capacity) {
+			lock (lockObject) {
+				if (packets.Count < Capacity) {
 					hasCapacity = true;
 					ip.Owner = this;
-					packets.Enqueue(ip);
+					packets.Enqueue (ip);
 				}
 			}
 			return hasCapacity;
 		}
 
-		public InformationPacket Receieve() {
+		public InformationPacket Receieve ()
+		{
 			InformationPacket ip;
-			lock(lockObject) {
-				ip = packets.Dequeue();
+			lock (lockObject) {
+				if (!sentInitialData && initialIp != null) {
+					sentInitialData = true;
+					ip = initialIp;
+				} else
+					ip = packets.Dequeue ();
 			}
 			return ip;
 		}
 
-		public void SetReceiver(IInputPort receiver) {
+		public void SetReceiver (IInputPort receiver)
+		{
 			this.receiver = receiver;
 		}
 
-		public void AddSender(IOutputPort sender) {
-			senders.Add(sender);
+		public void AddSender (IOutputPort sender)
+		{
+			senders.Add (sender);
+		}
+
+		public void SetInitialData (InformationPacket ip)
+		{
+			initialIp = ip;
 		}
 	}
 }

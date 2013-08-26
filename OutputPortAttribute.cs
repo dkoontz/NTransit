@@ -1,10 +1,14 @@
 using System;
 
-namespace Transit {
+namespace Transit
+{
 	[AttributeUsage(AttributeTargets.Field)]
-	public class OutputPortAttribute : Attribute{
+	public class OutputPortAttribute : Attribute
+	{
 		public string Name { get; private set; }
-		public OutputPortAttribute(string name) {
+
+		public OutputPortAttribute (string name)
+		{
 			Name = name;
 		}
 	}

@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Transit", "Transit.csproj", "{BF405721-20FF-4699-B2CF-B300C5A4CEDB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitTest", "TransitTest\TransitTest.csproj", "{87CDAA0F-37D3-4A3C-BB4E-55A7E4FF5A7E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{87CDAA0F-37D3-4A3C-BB4E-55A7E4FF5A7E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{87CDAA0F-37D3-4A3C-BB4E-55A7E4FF5A7E}.Debug|x86.Build.0 = Debug|Any CPU
+		{87CDAA0F-37D3-4A3C-BB4E-55A7E4FF5A7E}.Release|x86.ActiveCfg = Release|Any CPU
+		{87CDAA0F-37D3-4A3C-BB4E-55A7E4FF5A7E}.Release|x86.Build.0 = Release|Any CPU
+		{BF405721-20FF-4699-B2CF-B300C5A4CEDB}.Debug|x86.ActiveCfg = Debug|x86
+		{BF405721-20FF-4699-B2CF-B300C5A4CEDB}.Debug|x86.Build.0 = Debug|x86
+		{BF405721-20FF-4699-B2CF-B300C5A4CEDB}.Release|x86.ActiveCfg = Release|x86
+		{BF405721-20FF-4699-B2CF-B300C5A4CEDB}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Transit.csproj
+	EndGlobalSection
+EndGlobal

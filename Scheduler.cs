@@ -98,7 +98,6 @@ namespace nTransit {
 					else if (current is WaitForTime) {
 						var waitForTime = current as WaitForTime;
 						waitForTime.ElapsedTime += (currentTime - lastUpdateTime);
-//						Console.WriteLine ("Elapsed wait time for " + kvp.Key.Name + ": " + waitForTime.ElapsedTime);
 						if (waitForTime.ElapsedTime >= waitForTime.Milliseconds) moveNext = true;
 					}
 					else {

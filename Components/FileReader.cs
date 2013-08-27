@@ -26,9 +26,7 @@ namespace nTransit {
 				yield break;
 			}
 
-			while (!fileContentsPort.TrySend(contents)) {
-				yield return WaitForCapacityOn(fileContentsPort);
-			}
+			while (!fileContentsPort.TrySend(contents)) yield return WaitForCapacityOn(fileContentsPort);
 		}
 	}
 }

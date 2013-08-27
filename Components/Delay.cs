@@ -24,9 +24,7 @@ namespace nTransit {
 				
 				yield return WaitForTime((int)(delay * 1000));
 
-				while (!output.TrySend(ip)) {
-					yield return WaitForCapacityOn(output);
-				}
+				while (!output.TrySend(ip)) yield return WaitForCapacityOn(output);
 			}
 		}
 	}

@@ -14,9 +14,7 @@ namespace nTransit {
 
 		public override IEnumerator Execute() {
 			while (true) {
-				while (!output.TrySend(random.Next())) {
-					yield return WaitForCapacityOn(output);
-				}
+				while (!output.TrySend(random.Next())) yield return WaitForCapacityOn(output);
 			}
 		}
 	}

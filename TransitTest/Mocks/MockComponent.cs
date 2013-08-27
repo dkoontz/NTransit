@@ -1,13 +1,12 @@
 using System;
-using Transit;
+using nTransit;
 using System.Collections;
 
-namespace TransitTest
-{
-	public class MockComponent : Component
-	{
-		public override IEnumerator Execute () 
-		{
+namespace nTransit {
+	public class MockComponent : Component {
+		public MockComponent() : base ("Mock Component") {}
+
+		public override IEnumerator Execute() {
 			yield break;
 		}
 	}

@@ -1,9 +1,7 @@
 using System;
 
-namespace Transit
-{
-	public interface IPort
-	{
+namespace nTransit {
+	public interface IPort {
 		string Name { get; set; }
 
 		bool Closed { get; }
@@ -16,6 +14,6 @@ namespace Transit
 
 		bool HasComponent { get; }
 
-		void Close ();
+		void Close();
 	}
 }

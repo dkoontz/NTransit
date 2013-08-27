@@ -1,15 +1,13 @@
 using System;
 
-namespace Transit
-{
-	public interface IOutputPort : IPort
-	{
-		bool SendSequenceStart ();
+namespace nTransit {
+	public interface IOutputPort : IPort {
+		bool SendSequenceStart();
 
-		bool SendSequenceEnd ();
+		bool SendSequenceEnd();
 
-		bool Send (object content);
+		bool Send(object content);
 
-		bool Send (InformationPacket ip);
+		bool Send(InformationPacket ip);
 	}
 }

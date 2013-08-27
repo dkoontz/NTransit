@@ -7,9 +7,9 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{BF405721-20FF-4699-B2CF-B300C5A4CEDB}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Transit</RootNamespace>
+    <RootNamespace>nTransit</RootNamespace>
     <AssemblyName>Transit</AssemblyName>
-    <StartupObject>Transit.Scheduler</StartupObject>
+    <StartupObject>nTransit.Scheduler</StartupObject>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
@@ -51,6 +51,8 @@
     <Compile Include="IPort.cs" />
     <Compile Include="Scheduler.cs" />
     <Compile Include="Components\ConsoleWriter.cs" />
+    <Compile Include="Components\RandomNumberGenerator.cs" />
+    <Compile Include="Components\Delay.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

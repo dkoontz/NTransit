@@ -1,11 +1,8 @@
 using System;
 
-namespace Transit
-{
-	public class InformationPacket
-	{
-		public enum PacketType
-		{
+namespace nTransit {
+	public class InformationPacket {
+		public enum PacketType {
 			StartSequence,
 			EndSequence,
 			Content,
@@ -17,12 +14,10 @@ namespace Transit
 
 		public object Owner { get; set; }
 
-		public InformationPacket (object content) : this(InformationPacket.PacketType.Content, content)
-		{
+		public InformationPacket(object content) : this(InformationPacket.PacketType.Content, content) {
 		}
 
-		public InformationPacket (PacketType type, object content)
-		{
+		public InformationPacket(PacketType type, object content) {
 			Type = type;
 			Content = content;
 		}

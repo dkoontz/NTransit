@@ -1,113 +1,105 @@
 using System;
 using NUnit.Framework;
-using Transit;
+using nTransit;
 
-namespace TransitTest
-{
+namespace nTransit {
 	[TestFixture]
-	public class StandardOutputPortTests
-	{
+	public class StandardOutputPortTests {
 		[Test]
-		public void InvalidOperationException_is_thrown_when_sending_a_packet_to_a_closed_port ()
-		{
-			var port = new StandardOutputPort ();
-			port.Connection = new Connection ();
-			port.Close ();
+		public void InvalidOperationException_is_thrown_when_sending_a_packet_to_a_closed_port() {
+			var port = new StandardOutputPort();
+			port.Connection = new Connection();
+			port.Close();
 
-			Assert.Throws<InvalidOperationException> (() => {
+			Assert.Throws<InvalidOperationException>(() => {
 				port.Send("test");
 			});
 
-			Assert.Throws<InvalidOperationException> (() => {
-				port.SendSequenceStart ();
+			Assert.Throws<InvalidOperationException>(() => {
+				port.SendSequenceStart();
 			});
 
-			Assert.Throws<InvalidOperationException> (() => {
-				port.SendSequenceEnd ();
+			Assert.Throws<InvalidOperationException>(() => {
+				port.SendSequenceEnd();
 			});
 		}
 
 		[Test]
-		public void InvalidOperationException_is_thrown_when_sending_a_packet_to_a_port_with_no_connection ()
-		{
-			var port = new StandardOutputPort ();
+		public void InvalidOperationException_is_thrown_when_sending_a_packet_to_a_port_with_no_connection() {
+			var port = new StandardOutputPort();
 
-			Assert.Throws<InvalidOperationException> (() => {
+			Assert.Throws<InvalidOperationException>(() => {
 				port.Send("test");
 			});
 
-			Assert.Throws<InvalidOperationException> (() => {
-				port.SendSequenceStart ();
+			Assert.Throws<InvalidOperationException>(() => {
+				port.SendSequenceStart();
 			});
 
-			Assert.Throws<InvalidOperationException> (() => {
-				port.SendSequenceEnd ();
+			Assert.Throws<InvalidOperationException>(() => {
+				port.SendSequenceEnd();
 			});
 		}
 
 		[Test]
-		public void Send_creates_a_new_InformationPacket_and_sends_it_to_the_connection ()
-		{
-			var port = new StandardOutputPort ();
-			port.Connection = new Connection ();
-			port.Connection.SetReceiver (new StandardInputPort ());
+		public void Send_creates_a_new_InformationPacket_and_sends_it_to_the_connection() {
+			var port = new StandardOutputPort();
+			port.Connection = new Connection();
+			port.Connection.SetReceiver(new StandardInputPort());
 
-			Assert.True (port.Connection.Empty);
-			port.Send ("Test data");
-			Assert.False (port.Connection.Empty);
+			Assert.True(port.Connection.Empty);
+			port.Send("Test data");
+			Assert.False(port.Connection.Empty);
 
-			var receivedPacket = port.Connection.Receieve ();
-			Assert.AreEqual ("Test data", receivedPacket.Content);
+			var receivedPacket = port.Connection.Receieve();
+			Assert.AreEqual("Test data", receivedPacket.Content);
 		}
 
 		[Test]
-		public void SendSequenceStart_creates_a_new_InformationPacket_with_type_StartSequence_and_sends_it_to_the_connection ()
-		{
-			var port = new StandardOutputPort ();
-			port.Connection = new Connection ();
-			port.Connection.SetReceiver (new StandardInputPort ());
+		public void SendSequenceStart_creates_a_new_InformationPacket_with_type_StartSequence_and_sends_it_to_the_connection() {
+			var port = new StandardOutputPort();
+			port.Connection = new Connection();
+			port.Connection.SetReceiver(new StandardInputPort());
 
-			Assert.True (port.Connection.Empty);
-			port.SendSequenceStart ();
-			Assert.False (port.Connection.Empty);
+			Assert.True(port.Connection.Empty);
+			port.SendSequenceStart();
+			Assert.False(port.Connection.Empty);
 
-			var receivedPacket = port.Connection.Receieve ();
-			Assert.AreEqual (InformationPacket.PacketType.StartSequence, receivedPacket.Type);
-			Assert.IsNull (receivedPacket.Content);
+			var receivedPacket = port.Connection.Receieve();
+			Assert.AreEqual(InformationPacket.PacketType.StartSequence, receivedPacket.Type);
+			Assert.IsNull(receivedPacket.Content);
 		}
 
 		[Test]
-		public void SendSequenceEnd_creates_a_new_InformationPacket_with_type_EndSequence_and_sends_it_to_the_connection ()
-		{
-			var port = new StandardOutputPort ();
-			port.Connection = new Connection ();
-			port.Connection.SetReceiver (new StandardInputPort ());
+		public void SendSequenceEnd_creates_a_new_InformationPacket_with_type_EndSequence_and_sends_it_to_the_connection() {
+			var port = new StandardOutputPort();
+			port.Connection = new Connection();
+			port.Connection.SetReceiver(new StandardInputPort());
 
-			Assert.True (port.Connection.Empty);
-			port.SendSequenceEnd ();
-			Assert.False (port.Connection.Empty);
+			Assert.True(port.Connection.Empty);
+			port.SendSequenceEnd();
+			Assert.False(port.Connection.Empty);
 
-			var receivedPacket = port.Connection.Receieve ();
-			Assert.AreEqual (InformationPacket.PacketType.EndSequence, receivedPacket.Type);
-			Assert.IsNull (receivedPacket.Content);
+			var receivedPacket = port.Connection.Receieve();
+			Assert.AreEqual(InformationPacket.PacketType.EndSequence, receivedPacket.Type);
+			Assert.IsNull(receivedPacket.Content);
 		}
 
 		[Test]
-		public void Successfully_sending_an_ip_causes_the_component_to_release_the_InformationPacket ()
-		{
-			var port = new StandardOutputPort ();
-			port.Connection = new Connection ();
-			port.Connection.SetReceiver (new StandardInputPort ());
+		public void Successfully_sending_an_ip_causes_the_component_to_release_the_InformationPacket() {
+			var port = new StandardOutputPort();
+			port.Connection = new Connection();
+			port.Connection.SetReceiver(new StandardInputPort());
 
-			var component = new MockComponent ();
+			var component = new MockComponent();
 			port.Component = component;
 
 			var ip = new InformationPacket("Test data");
 			component.ClaimIp(ip);
 
-			port.Send (ip);
+			port.Send(ip);
 
-			Assert.IsNull (ip.Owner);
+			Assert.IsNull(ip.Owner);
 		}
 	}
 }

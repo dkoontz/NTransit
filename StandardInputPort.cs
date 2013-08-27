@@ -1,9 +1,7 @@
 using System;
 
-namespace Transit
-{
-	public class StandardInputPort : IInputPort
-	{
+namespace nTransit {
+	public class StandardInputPort : IInputPort {
 		public string Name { get; set; }
 
 		public bool Closed { get; protected set; }
@@ -18,25 +16,23 @@ namespace Transit
 
 		public bool HasPacketsWaiting { get { return !Connection.Empty; } }
 
-		public bool Receive (out InformationPacket packet)
-		{
+		public bool Receive(out InformationPacket packet) {
 			packet = null;
-			if (Closed) throw new InvalidOperationException (string.Format ("Cannot receive data from port {0}, it is closed", Name));
-			else if (null == Connection) throw new InvalidOperationException (string.Format ("Cannot receive data from port {0}, it does not have a connection", Name));
+			if (Closed) throw new InvalidOperationException(string.Format("Cannot receive data from port {0}, it is closed", Name));
+			else if (null == Connection) throw new InvalidOperationException(string.Format("Cannot receive data from port {0}, it does not have a connection", Name));
 			else if (Connection.Empty) return false;
 
-			try 
-			{
-				packet = Connection.Receieve ();
-				Component.ClaimIp (packet);
+			try {
+				packet = Connection.Receieve();
+				Component.ClaimIp(packet);
 				return true;
-			} catch (InvalidOperationException) {
+			}
+			catch (InvalidOperationException) {
 				return false;
 			}
 		}
 
-		public void Close ()
-		{
+		public void Close() {
 			Closed = true;
 		}
 	}

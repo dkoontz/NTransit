@@ -12,7 +12,7 @@ namespace nTransit {
 			port.Close();
 
 			Assert.Throws<InvalidOperationException>(() => {
-				port.Send("test");
+				port.TrySend("test");
 			});
 
 			Assert.Throws<InvalidOperationException>(() => {
@@ -29,7 +29,7 @@ namespace nTransit {
 			var port = new StandardOutputPort();
 
 			Assert.Throws<InvalidOperationException>(() => {
-				port.Send("test");
+				port.TrySend("test");
 			});
 
 			Assert.Throws<InvalidOperationException>(() => {
@@ -48,7 +48,7 @@ namespace nTransit {
 			port.Connection.SetReceiver(new StandardInputPort());
 
 			Assert.True(port.Connection.Empty);
-			port.Send("Test data");
+			port.TrySend("Test data");
 			Assert.False(port.Connection.Empty);
 
 			var receivedPacket = port.Connection.Receieve();
@@ -97,7 +97,7 @@ namespace nTransit {
 			var ip = new InformationPacket("Test data");
 			component.ClaimIp(ip);
 
-			port.Send(ip);
+			port.TrySend(ip);
 
 			Assert.IsNull(ip.Owner);
 		}

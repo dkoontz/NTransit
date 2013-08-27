@@ -39,19 +39,6 @@ namespace nTransit {
 		}
 
 		[Test]
-		public void Sending_to_an_IIP_connection_throws_an_InvalidOperationException() {
-			var connection = new Connection();
-			connection.SetReceiver(new StandardInputPort());
-			var initialIp = new InformationPacket("Initial data");
-			var normalIp = new InformationPacket("Regular data");
-			connection.SetInitialData(initialIp);
-
-			Assert.Throws<InvalidOperationException>(() => {
-				connection.SendPacketIfCapacityAllows(normalIp);
-			});
-		}
-
-		[Test]
 		public void Initial_data_is_only_received_once() {
 			var connection = new Connection();
 			var initialIp = new InformationPacket("Initial data");
@@ -59,6 +46,24 @@ namespace nTransit {
 
 			Assert.AreEqual(initialIp, connection.Receieve());
 			Assert.Throws<InvalidOperationException>(() => connection.Receieve());
+		}
+
+		[Test]
+		public void Initial_data_is_received_first() {
+			var connection = new Connection();
+			connection.SetReceiver(new StandardInputPort());
+
+			var initialIp = new InformationPacket("Initial data");
+			var secondIp = new InformationPacket("Test data");
+
+			connection.SetInitialData(initialIp);
+			connection.SendPacketIfCapacityAllows(secondIp);
+
+			var firstRecieved = connection.Receieve();
+			var secondReceived = connection.Receieve();
+
+			Assert.AreSame(initialIp, firstRecieved);
+			Assert.AreSame(secondIp, secondReceived);
 		}
 
 		[Test]

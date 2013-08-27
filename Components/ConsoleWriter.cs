@@ -9,10 +9,8 @@ namespace nTransit {
 		public ConsoleWriter(string name) : base (name) {}
 
 		public override IEnumerator Execute() {
-			InformationPacket packet;
-			while (!data.Receive(out packet)) {
-				yield return WaitForPacketOn(data);
-			}
+			yield return WaitForPacketOn(data);
+			var packet = data.Receive();
 
 			if (packet.Content is Exception) {
 				var exception = packet.Content as Exception;

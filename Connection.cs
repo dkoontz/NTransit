@@ -38,7 +38,6 @@ namespace nTransit {
 		}
 
 		public bool SendPacketIfCapacityAllows(InformationPacket ip) {
-			if (IsInitialInformationPacket)	throw new InvalidOperationException(string.Format("Cannot send packet from '{0}' to connection that is an IIP", ip.Owner));
 			if (null == receiver) throw new InvalidOperationException(string.Format("Cannot send packet from '{0}' to connection that has no reciever", ip.Owner));
 
 			bool hasCapacity = false;

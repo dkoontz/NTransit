@@ -9,7 +9,10 @@ namespace nTransit {
 	public class Scheduler {
 		public static void Main() {
 			var scheduler = new Scheduler();
-			
+
+			var consoleWriter = new ConsoleWriter("Console Output");
+			scheduler.AddComponent(consoleWriter);
+
 //			var reader = new FileReader ("Get File Contents");
 //			scheduler.AddComponent (reader);
 //
@@ -22,20 +25,18 @@ namespace nTransit {
 			var delay = new Delay("Delayer");
 			scheduler.AddComponent(delay);
 
-			var consoleWriter = new ConsoleWriter("Console Output");
-			scheduler.AddComponent(consoleWriter);
-
 			scheduler.SetupPorts();
 
-			scheduler.Connect(rng, "Number", delay, "In");
-			scheduler.Connect(delay, "Out", consoleWriter, "In");
 //			scheduler.Connect (reader, "File Contents", writer, "Text To Write");
 //			scheduler.Connect (reader, "Errors", consoleWriter, "In");
 //			scheduler.Connect (writer, "Errors", consoleWriter, "In");
-
-			scheduler.SetInitialData(delay, "Seconds Between Packets", 3);
 //			scheduler.SetInitialData (reader, "File Name", "test1.txt");
 //			scheduler.SetInitialData (writer, "File Name", "test2.txt");
+
+			scheduler.Connect(rng, "Number", delay, "In");
+			scheduler.Connect(delay, "Out", consoleWriter, "In");
+			scheduler.SetInitialData(delay, "Seconds Between Packets", .5f);
+
 			scheduler.Go();
 		}
 

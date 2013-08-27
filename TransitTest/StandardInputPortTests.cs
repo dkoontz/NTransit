@@ -10,29 +10,17 @@ namespace nTransit {
 			var port = new StandardInputPort();
 			port.Connection = new Connection();
 			port.Close();
-			InformationPacket outValue;
 			Assert.Throws<InvalidOperationException>(() => {
-				port.Receive(out outValue);
+				port.Receive();
 			});
 		}
 
 		[Test]
 		public void InvalidOperationException_is_thrown_when_receiving_from_a_port_with_no_connection() {
 			var port = new StandardInputPort();
-			InformationPacket outValue = new InformationPacket("this should be overwritten by Receive");
 			Assert.Throws<InvalidOperationException>(() => {
-				port.Receive(out outValue);
+				port.Receive();
 			});
-		}
-
-		[Test]
-		public void When_a_receive_is_not_successful_the_out_value_is_null() {
-			var port = new StandardInputPort();
-			port.Connection = new Connection();
-			InformationPacket outValue = new InformationPacket("this should be overwritten by Receive");
-			port.Receive(out outValue);
-
-			Assert.IsNull(outValue);
 		}
 
 		[Test]
@@ -45,9 +33,9 @@ namespace nTransit {
 			var component = new MockComponent();
 			port.Component = component;
 
-			InformationPacket outValue;
-			port.Receive(out outValue);
+			var ip = port.Receive();
 			Assert.AreSame(component, packet.Owner);
+			Assert.AreSame(component, ip.Owner);
 		}
 	}
 }

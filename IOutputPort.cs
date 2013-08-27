@@ -6,8 +6,8 @@ namespace nTransit {
 
 		bool SendSequenceEnd();
 
-		bool Send(object content);
+		bool TrySend(object content);
 
-		bool Send(InformationPacket ip);
+		bool TrySend(InformationPacket ip);
 	}
 }

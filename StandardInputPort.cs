@@ -16,20 +16,14 @@ namespace nTransit {
 
 		public bool HasPacketsWaiting { get { return !Connection.Empty; } }
 
-		public bool Receive(out InformationPacket packet) {
-			packet = null;
+		public InformationPacket Receive() {
 			if (Closed) throw new InvalidOperationException(string.Format("Cannot receive data from port {0}, it is closed", Name));
 			else if (null == Connection) throw new InvalidOperationException(string.Format("Cannot receive data from port {0}, it does not have a connection", Name));
-			else if (Connection.Empty) return false;
+			else if (Connection.Empty) throw new InvalidOperationException(string.Format("Cannot receive data from port {0}, it does not have any waiting packets", Name));
 
-			try {
-				packet = Connection.Receieve();
-				Component.ClaimIp(packet);
-				return true;
-			}
-			catch (InvalidOperationException) {
-				return false;
-			}
+			var packet = Connection.Receieve();
+			Component.ClaimIp(packet);
+			return packet;
 		}
 
 		public void Close() {

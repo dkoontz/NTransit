@@ -14,8 +14,7 @@ namespace nTransit {
 
 		public object Owner { get; set; }
 
-		public InformationPacket(object content) : this(InformationPacket.PacketType.Content, content) {
-		}
+		public InformationPacket(object content) : this(InformationPacket.PacketType.Content, content) {}
 
 		public InformationPacket(PacketType type, object content) {
 			Type = type;

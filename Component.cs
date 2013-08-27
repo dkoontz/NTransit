@@ -66,9 +66,7 @@ namespace nTransit {
 
 			return false;
 		}
-		//		public void CheckForClosureDueToClosedInputPorts() {
-		//			if(InputPorts.)
-		//		}
+
 		protected WaitForPacketOn WaitForPacketOn(params IInputPort[] ports) {
 			return new WaitForPacketOn(ports);
 		}

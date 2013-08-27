@@ -10,18 +10,11 @@ namespace nTransit {
 		[OutputPort("File Contents")]
 		StandardOutputPort fileContentsPort;
 
-		public FileReader(string name) : base(name) {
-			fileNamePort = new StandardInputPort();
-			fileContentsPort = new StandardOutputPort();
-		}
+		public FileReader(string name) : base(name) {}
 
 		public override IEnumerator Execute() {
-			InformationPacket packet;
-			while (!fileNamePort.Receive(out packet)) {
-				yield return WaitForPacketOn(fileNamePort);
-			}
-
-			var fileName = packet.Content as string;
+			yield return WaitForPacketOn(fileNamePort);
+			var fileName = fileNamePort.Receive().Content as string;
 
 			string contents;
 			try {
@@ -29,11 +22,11 @@ namespace nTransit {
 				contents = reader.ReadToEnd();
 			}
 			catch (Exception ex) {
-				Errors.Send(ex);
+				Errors.TrySend(ex);
 				yield break;
 			}
 
-			while (!fileContentsPort.Send(contents)) {
+			while (!fileContentsPort.TrySend(contents)) {
 				yield return WaitForCapacityOn(fileContentsPort);
 			}
 		}

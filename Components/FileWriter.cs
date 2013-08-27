@@ -13,18 +13,11 @@ namespace nTransit {
 		public FileWriter(string name) : base(name) {}
 
 		public override IEnumerator Execute() {
-			InformationPacket packet;
-			while (!fileNamePort.Receive(out packet)) {
-				yield return WaitForPacketOn(fileNamePort);
-			}
+			yield return WaitForPacketOn(fileNamePort);
+			var fileName = fileNamePort.Receive().Content as string;
 
-			var fileName = packet.Content as string;
-
-			while (!fileContentsPort.Receive(out packet)) {
-				yield return WaitForPacketOn(fileContentsPort);
-			}
-
-			var contents = packet.Content as string;
+			yield return WaitForPacketOn(fileContentsPort);
+			var contents = fileContentsPort.Receive().Content as string;
 
 			try {
 				using (var writer = new StreamWriter(fileName)) {
@@ -32,7 +25,7 @@ namespace nTransit {
 				}
 			}
 			catch (IOException ex) {
-				Errors.Send(ex);
+				Errors.TrySend(ex);
 				yield break;
 			}
 		}

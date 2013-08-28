@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 
-namespace nTransit {
+namespace NTransit {
 	public class FileReader : Component {
 		[InputPort("File Name")]
 		StandardInputPort fileNamePort;

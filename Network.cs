@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace nTransit {
+namespace NTransit {
 	public class Network {
 		//		List<Component> components;
 		public Network() {

@@ -1,8 +1,8 @@
 using System;
-using nTransit;
+using NTransit;
 using System.Collections;
 
-namespace nTransit {
+namespace NTransit {
 	public class MockComponent : Component {
 		public MockComponent() : base ("Mock Component") {}
 

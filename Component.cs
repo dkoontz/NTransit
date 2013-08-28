@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace nTransit {
+namespace NTransit {
 	public class WaitForPacketOn {
 		public IInputPort[] Ports { get; private set; }
 
@@ -66,6 +66,10 @@ namespace nTransit {
 
 			return false;
 		}
+
+		// This method is called when the Network is told to shutdown
+		// Override this method to add your own cleanup logic
+		public virtual void Close() {}
 
 		protected WaitForPacketOn WaitForPacketOn(params IInputPort[] ports) {
 			return new WaitForPacketOn(ports);

@@ -1,6 +1,6 @@
 using System;
 
-namespace nTransit {
+namespace NTransit {
 	public interface IOutputPort : IPort {
 		bool SendSequenceStart();
 

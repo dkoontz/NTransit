@@ -5,51 +5,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
 
-namespace nTransit {
+namespace NTransit {
 	public class Scheduler {
-		public static void Main() {
-			var scheduler = new Scheduler();
-
-			var consoleWriter = new ConsoleWriter("Console Output");
-			scheduler.AddComponent(consoleWriter);
-
-//			var reader = new FileReader ("Get File Contents");
-//			scheduler.AddComponent (reader);
-//
-//			var writer = new FileWriter ("Write File Contents");
-//			scheduler.AddComponent (writer);
-
-			var rng = new RandomNumberGenerator("Number generator");
-			scheduler.AddComponent(rng);
-
-			var delay = new Delay("Delayer");
-			scheduler.AddComponent(delay);
-
-			scheduler.SetupPorts();
-
-//			scheduler.Connect (reader, "File Contents", writer, "Text To Write");
-//			scheduler.Connect (reader, "Errors", consoleWriter, "In");
-//			scheduler.Connect (writer, "Errors", consoleWriter, "In");
-//			scheduler.SetInitialData (reader, "File Name", "test1.txt");
-//			scheduler.SetInitialData (writer, "File Name", "test2.txt");
-
-			scheduler.Connect(rng, "Number", delay, "In");
-			scheduler.Connect(delay, "Out", consoleWriter, "In");
-			scheduler.SetInitialData(delay, "Seconds Between Packets", .5f);
-
-			scheduler.Go();
-		}
-
 		List<Component> components;
-		Dictionary<Component, IEnumerator> componentExecutionState;
+		Dictionary<Component, IEnumerator> componentExecutionStates;
 		LinkedList<Component> componentsThatHaveTerminated;
 		Dictionary<Component, bool> currentlyRunningComponents;
 		Stopwatch stopwatch;
 		long lastUpdateTime;
 
+		bool shuttingDown;
+
 		public Scheduler() {
 			components = new List<Component>();
-			componentExecutionState = new Dictionary<Component, IEnumerator>();
+			componentExecutionStates = new Dictionary<Component, IEnumerator>();
 			componentsThatHaveTerminated = new LinkedList<Component>();
 			currentlyRunningComponents = new Dictionary<Component, bool>();
 			stopwatch = new Stopwatch();
@@ -58,7 +27,7 @@ namespace nTransit {
 		public void Go() {
 			foreach (var component in components) {
 				if (IsAutoStartComponent(component)) {
-					componentExecutionState[component] = component.Execute();
+					componentExecutionStates[component] = component.Execute();
 				}
 			}
 
@@ -66,13 +35,20 @@ namespace nTransit {
 			lastUpdateTime = stopwatch.ElapsedMilliseconds;
 			bool moveNext;
 
-			while (componentExecutionState.Count > 0) {
+			while (componentExecutionStates.Count > 0) {
+				if (shuttingDown) {
+					foreach (var kvp in componentExecutionStates) {
+						kvp.Key.Close();
+					}
+					break;
+				}
+
 				System.Threading.Thread.Sleep(0);
 				componentsThatHaveTerminated.Clear();
 				currentlyRunningComponents.Clear();
 
 				var currentTime = stopwatch.ElapsedMilliseconds;
-				foreach (var kvp in componentExecutionState) {
+				foreach (var kvp in componentExecutionStates) {
 					moveNext = false;
 					currentlyRunningComponents[kvp.Key] = true;
 					var current = kvp.Value.Current;
@@ -111,19 +87,23 @@ namespace nTransit {
 
 				foreach (var component in componentsThatHaveTerminated) {
 					currentlyRunningComponents.Remove(component);
-					componentExecutionState.Remove(component);
+					componentExecutionStates.Remove(component);
 				}
 
 				var nonExecutingComponents = components.FindAll(c => !currentlyRunningComponents.ContainsKey(c));
 
 				foreach (var component in nonExecutingComponents) {
 					if (component.HasPacketOnAnyNonIipInputPort()) {
-						componentExecutionState[component] = component.Execute();
+						componentExecutionStates[component] = component.Execute();
 					}
 				}
 
 				lastUpdateTime = currentTime;
 			}
+		}
+
+		public void Shutdown() {
+			shuttingDown = true;
 		}
 
 		public void SetupPorts() {

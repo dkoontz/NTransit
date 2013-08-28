@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Linq;
 
-namespace nTransit {
+namespace NTransit {
 	public class Connection {
 		// TODO: Remove this and have a config object that can be configured at runtime
 		static int DEFAULT_CONNECTION_CAPACITY = 1;

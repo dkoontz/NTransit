@@ -1,8 +1,8 @@
 using System;
 using NUnit.Framework;
-using nTransit;
+using NTransit;
 
-namespace nTransit {
+namespace NTransit {
 	[TestFixture]
 	public class StandardOutputPortTests {
 		[Test]

@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 
-namespace nTransit {
+namespace NTransit {
 	public class ConsoleWriter : Component {
 		[InputPort("In")]
 		StandardInputPort data;

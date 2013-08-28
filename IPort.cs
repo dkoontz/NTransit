@@ -1,6 +1,6 @@
 using System;
 
-namespace nTransit {
+namespace NTransit {
 	public interface IPort {
 		string Name { get; set; }
 

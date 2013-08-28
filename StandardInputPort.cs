@@ -1,6 +1,6 @@
 using System;
 
-namespace nTransit {
+namespace NTransit {
 	public class StandardInputPort : IInputPort {
 		public string Name { get; set; }
 

@@ -1,6 +1,6 @@
 using System;
 
-namespace nTransit {
+namespace NTransit {
 	public class InformationPacket {
 		public enum PacketType {
 			StartSequence,

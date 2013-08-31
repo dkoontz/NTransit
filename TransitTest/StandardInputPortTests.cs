@@ -2,7 +2,7 @@ using System;
 using NUnit.Framework;
 using NTransit;
 
-namespace NTransit {
+namespace NTransitTest {
 	[TestFixture]
 	public class StandardInputPortTests {
 		[Test]
@@ -31,7 +31,7 @@ namespace NTransit {
 			packet.Owner = port.Connection;
 			port.Connection.SetInitialData(packet);
 			var component = new MockComponent();
-			port.Component = component;
+			port.Process = component;
 
 			var ip = port.Receive();
 			Assert.AreSame(component, packet.Owner);

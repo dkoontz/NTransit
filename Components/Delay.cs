@@ -4,27 +4,27 @@ using System.Collections;
 namespace NTransit {
 	public class Delay : Component {
 		[InputPort("Seconds Between Packets")]
-		StandardInputPort secondsBetweenPackets;
+		public StandardInputPort SecondsBetweenPackets  { get; set; }
 
 		[InputPort("In")]
-		StandardInputPort input;
+		public StandardInputPort InPort { get; set; }
 
 		[OutputPort("Out")]
-		StandardOutputPort output;
+		public StandardOutputPort OutPort { get; set; }
 
 		public Delay(string name) : base (name) {}
 
 		public override IEnumerator Execute() {
-			yield return WaitForPacketOn(secondsBetweenPackets);
-			var delay = Convert.ToSingle(secondsBetweenPackets.Receive().Content);
+			yield return WaitForPacketOn(SecondsBetweenPackets);
+			var delay = Convert.ToSingle(SecondsBetweenPackets.Receive().Content);
 
 			while (true) {
-				yield return WaitForPacketOn(input);
-				var ip = input.Receive();
+				yield return WaitForPacketOn(InPort);
+				var ip = InPort.Receive();
 				
 				yield return WaitForTime((int)(delay * 1000));
 
-				while (!output.TrySend(ip)) yield return WaitForCapacityOn(output);
+				while (!OutPort.TrySend(ip)) yield return WaitForCapacityOn(OutPort);
 			}
 		}
 	}

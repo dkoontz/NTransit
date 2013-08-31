@@ -4,7 +4,7 @@ using System.Collections;
 namespace NTransit {
 	public class RandomNumberGenerator : Component {
 		[OutputPort ("Number")]
-		StandardOutputPort output;
+		public StandardOutputPort Output { get; set; }
 
 		Random random;
 
@@ -14,7 +14,7 @@ namespace NTransit {
 
 		public override IEnumerator Execute() {
 			while (true) {
-				while (!output.TrySend(random.Next())) yield return WaitForCapacityOn(output);
+				while (!Output.TrySend(random.Next())) yield return WaitForCapacityOn(Output);
 			}
 		}
 	}

@@ -39,6 +39,9 @@
     <Compile Include="StandardOutputPortTests.cs" />
     <Compile Include="StandardInputPortTests.cs" />
     <Compile Include="ConnectionTests.cs" />
+    <Compile Include="Components\IpQueueTests.cs" />
+    <Compile Include="Mocks\MockOutputPort.cs" />
+    <Compile Include="Mocks\MockConnection.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -49,5 +52,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Mocks\" />
+    <Folder Include="Components\" />
   </ItemGroup>
 </Project>

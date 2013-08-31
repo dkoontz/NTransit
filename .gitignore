@@ -2,3 +2,4 @@
 bin
 *.userprefs
 TransitTest/test-results
+test-results

@@ -2,7 +2,7 @@ using System;
 using NUnit.Framework;
 using NTransit;
 
-namespace NTransit {
+namespace NTransitTest {
 	[TestFixture]
 	public class StandardOutputPortTests {
 		[Test]
@@ -92,7 +92,7 @@ namespace NTransit {
 			port.Connection.SetReceiver(new StandardInputPort());
 
 			var component = new MockComponent();
-			port.Component = component;
+			port.Process = component;
 
 			var ip = new InformationPacket("Test data");
 			component.ClaimIp(ip);

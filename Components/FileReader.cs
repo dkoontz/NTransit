@@ -5,16 +5,16 @@ using System.IO;
 namespace NTransit {
 	public class FileReader : Component {
 		[InputPort("File Name")]
-		StandardInputPort fileNamePort;
+		public StandardInputPort FileNamePort { get; set; }
 
 		[OutputPort("File Contents")]
-		StandardOutputPort fileContentsPort;
+		public StandardOutputPort FileContentsPort { get; set; }
 
 		public FileReader(string name) : base(name) {}
 
 		public override IEnumerator Execute() {
-			yield return WaitForPacketOn(fileNamePort);
-			var fileName = fileNamePort.Receive().Content as string;
+			yield return WaitForPacketOn(FileNamePort);
+			var fileName = FileNamePort.Receive().Content as string;
 
 			string contents;
 			try {
@@ -26,7 +26,7 @@ namespace NTransit {
 				yield break;
 			}
 
-			while (!fileContentsPort.TrySend(contents)) yield return WaitForCapacityOn(fileContentsPort);
+			while (!FileContentsPort.TrySend(contents)) yield return WaitForCapacityOn(FileContentsPort);
 		}
 	}
 }

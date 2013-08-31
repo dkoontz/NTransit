@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Linq;
 
 namespace NTransit {
-	public class Connection {
+	public class Connection : IConnection {
 		// TODO: Remove this and have a config object that can be configured at runtime
 		static int DEFAULT_CONNECTION_CAPACITY = 1;
 
@@ -19,6 +19,10 @@ namespace NTransit {
 				if (initialIp != null) return sentInitialData;
 				else return packets.Count == 0;
 			}
+		}
+
+		public int NumberOfPacketsHeld { 
+			get { return packets.Count; }
 		}
 
 		public bool IsInitialInformationPacket { get; private set; }

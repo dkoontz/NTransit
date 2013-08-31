@@ -5,52 +5,100 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
 
+// Big TODO's:
+//
+// Attributes on IPs
+// FBP / Json importer
+// Auto ports
+// Support thread pool and individual threads
+// Sub-Networks
+// Array Inputs
+// Array Outputs
+// Auto wire unconnected output ports to Drop component
+// Closeable ports that cannot be re-opened due to incoming IPs
+// Figure out IP ownership and tracking/disposing
+
 namespace NTransit {
+	public interface IProcessRunner {
+		IEnumerator Start(Component process);
+		bool Tick(IEnumerator iterator);
+	}
+
+	public class SingleThreadProcessRunner : IProcessRunner {
+		public IEnumerator Start(Component process) {
+			return process.Execute();
+		}
+
+		public bool Tick(IEnumerator iterator) {
+			return iterator.MoveNext();
+		}
+	}
+
 	public class Scheduler {
-		List<Component> components;
-		Dictionary<Component, IEnumerator> componentExecutionStates;
-		LinkedList<Component> componentsThatHaveTerminated;
-		Dictionary<Component, bool> currentlyRunningComponents;
-		Stopwatch stopwatch;
-		long lastUpdateTime;
+		public bool HasProcessesThatAreCurrentlyRunning { get; private set; }
+
+		IProcessRunner processRunner;
+		List<Component> processes;
+		Dictionary<Component, IEnumerator> processExecutionStates;
+		LinkedList<Component> processesThatHaveTerminated;
+		Dictionary<Component, bool> currentlyRunningProcesses;
 
 		bool shuttingDown;
 
-		public Scheduler() {
-			components = new List<Component>();
-			componentExecutionStates = new Dictionary<Component, IEnumerator>();
-			componentsThatHaveTerminated = new LinkedList<Component>();
-			currentlyRunningComponents = new Dictionary<Component, bool>();
-			stopwatch = new Stopwatch();
+		public Scheduler() : this(new SingleThreadProcessRunner()) {}
+
+		public Scheduler(IProcessRunner processRunner) {
+			this.processRunner = processRunner;
+
+			processes = new List<Component>();
+			processExecutionStates = new Dictionary<Component, IEnumerator>();
+			processesThatHaveTerminated = new LinkedList<Component>();
+			currentlyRunningProcesses = new Dictionary<Component, bool>();
 		}
 
-		public void Go() {
-			foreach (var component in components) {
-				if (IsAutoStartComponent(component)) {
-					componentExecutionStates[component] = component.Execute();
-				}
-			}
-
+		public void AutoRun() {
+			var stopwatch = new Stopwatch();
 			stopwatch.Start();
-			lastUpdateTime = stopwatch.ElapsedMilliseconds;
-			bool moveNext;
+			long lastUpdateTime = stopwatch.ElapsedMilliseconds;
 
-			while (componentExecutionStates.Count > 0) {
-				if (shuttingDown) {
-					foreach (var kvp in componentExecutionStates) {
-						kvp.Key.Close();
-					}
+			Init();
+
+
+			while (true) {
+				var currentTime = stopwatch.ElapsedMilliseconds;
+				if(!Tick(currentTime - lastUpdateTime)) {
 					break;
 				}
+				lastUpdateTime = currentTime;
+			}
+		}
 
-				System.Threading.Thread.Sleep(0);
-				componentsThatHaveTerminated.Clear();
-				currentlyRunningComponents.Clear();
+		public void Init() {
+			foreach (var process in processes) {
+				if (IsAutoStartProcess(process)) {
+					processExecutionStates[process] = processRunner.Start(process);
+				}
+			}
+		}
 
-				var currentTime = stopwatch.ElapsedMilliseconds;
-				foreach (var kvp in componentExecutionStates) {
+		public bool Tick(long elapsedTime) {
+			HasProcessesThatAreCurrentlyRunning = false;
+			bool moveNext;
+
+			if (shuttingDown) {
+				foreach (var kvp in processExecutionStates) {
+					kvp.Key.Close();
+				}
+				return false;
+			}
+
+			if (processExecutionStates.Count > 0) {
+				processesThatHaveTerminated.Clear();
+				currentlyRunningProcesses.Clear();
+
+				foreach (var kvp in processExecutionStates) {
 					moveNext = false;
-					currentlyRunningComponents[kvp.Key] = true;
+					currentlyRunningProcesses[kvp.Key] = true;
 					var current = kvp.Value.Current;
 
 					if (current is WaitForPacketOn) {
@@ -71,9 +119,26 @@ namespace NTransit {
 
 						if (allHaveCapacity) moveNext = true;
 					}
+					else if (current is WaitForPacketOrCapacityOnAny) {
+						var waitOnAny = current as WaitForPacketOrCapacityOnAny;
+						var anyAreReady = false;
+						UnityEngine.Debug.Log("WaitForPacketOrCapacityOnAny - checking inPorts");
+						foreach (var port in waitOnAny.InputPorts) {
+							anyAreReady = anyAreReady || port.HasPacketsWaiting;
+						}
+						UnityEngine.Debug.Log("found inport with data: " + anyAreReady);
+
+						foreach (var port in waitOnAny.OutputPorts) {
+							anyAreReady = anyAreReady || !port.Connection.Full;
+						}
+						UnityEngine.Debug.Log("found outport with capacity: " + anyAreReady);
+
+						moveNext = anyAreReady;
+					} 
 					else if (current is WaitForTime) {
 						var waitForTime = current as WaitForTime;
-						waitForTime.ElapsedTime += (currentTime - lastUpdateTime);
+						waitForTime.ElapsedTime += elapsedTime;
+
 						if (waitForTime.ElapsedTime >= waitForTime.Milliseconds) moveNext = true;
 					}
 					else {
@@ -81,74 +146,76 @@ namespace NTransit {
 					}
 
 					if (moveNext) {
-						if (!kvp.Value.MoveNext()) componentsThatHaveTerminated.AddLast(kvp.Key);
+						HasProcessesThatAreCurrentlyRunning = true;
+						if (!processRunner.Tick(kvp.Value))	processesThatHaveTerminated.AddLast(kvp.Key);
 					}
 				}
 
-				foreach (var component in componentsThatHaveTerminated) {
-					currentlyRunningComponents.Remove(component);
-					componentExecutionStates.Remove(component);
+				foreach (var process in processesThatHaveTerminated) {
+					currentlyRunningProcesses.Remove(process);
+					processExecutionStates.Remove(process);
 				}
 
-				var nonExecutingComponents = components.FindAll(c => !currentlyRunningComponents.ContainsKey(c));
+				var nonExecutingProcesses = processes.FindAll(c => !currentlyRunningProcesses.ContainsKey(c));
 
-				foreach (var component in nonExecutingComponents) {
-					if (component.HasPacketOnAnyNonIipInputPort()) {
-						componentExecutionStates[component] = component.Execute();
+				foreach (var process in nonExecutingProcesses) {
+					if (process.HasPacketOnAnyNonIipInputPort()) {
+						processExecutionStates[process] = processRunner.Start(process);
 					}
 				}
 
-				lastUpdateTime = currentTime;
+				return true;
 			}
+			else return false;
 		}
 
 		public void Shutdown() {
 			shuttingDown = true;
 		}
 
-		public void SetupPorts() {
-			List<IInputPort> inputPortList;
-			FieldInfo inputPortListField;
+		void SetupPort(Component process) {
+			var inputPortList = new List<IInputPort>();
+			var inputPortListProperty = process.GetType().GetProperty("InputPorts", BindingFlags.Public | BindingFlags.Instance);
+			inputPortListProperty.SetValue(process, inputPortList, null);
 
-			foreach (var component in components) {
-				inputPortList = new List<IInputPort>();
-				inputPortListField = component.GetType().GetField("InputPorts", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.GetField | BindingFlags.Public);
-				inputPortListField.SetValue(component, inputPortList);
-
-				foreach (var field in component.GetType ().GetFields (BindingFlags.NonPublic | BindingFlags.Instance)) {
-					foreach (Attribute attr in field.GetCustomAttributes (true)) {
-						if (attr is InputPortAttribute) {
-							if (!typeof(IInputPort).IsAssignableFrom(field.FieldType)) {
-								throw new InvalidOperationException(
-									string.Format("The InputPort attribute on '{0}' is not valid, type must be IInputPort but was '{1}'",
-								                  field.Name, field.FieldType));
-							}
-							var inputPort = attr as InputPortAttribute;
-							CreatePort(component, field, inputPort.Name);
-							inputPortList.Add(field.GetValue(component) as IInputPort);
+			foreach (var property in process.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
+				foreach (Attribute attr in property.GetCustomAttributes(true)) {
+					if (attr is InputPortAttribute) {
+						if (!typeof(IInputPort).IsAssignableFrom(property.PropertyType)) {
+							throw new InvalidOperationException(
+								string.Format("The InputPort attribute on field '{0}' of component '{1}' is not valid, type must be IInputPort but was '{2}'",
+								              property.Name, 
+							                  process.Name, 
+							              	  property.PropertyType));
 						}
-						else if (attr is OutputPortAttribute) {
-							if (!typeof(IOutputPort).IsAssignableFrom(field.FieldType)) {
-								throw new InvalidOperationException(
-									string.Format("The OutputPort attribute on '{0}' is not valid, type must be IOutputPort but was '{1}'",
-								                  field.Name, field.FieldType));
+						var inputPort = attr as InputPortAttribute;
+						process.SetInputPort(property.Name, CreatePort(process, property, inputPort.Name) as IInputPort);
+						inputPortList.Add(property.GetValue(process, null) as IInputPort);
+					}
+					else if (attr is OutputPortAttribute) {
+						if (!typeof(IOutputPort).IsAssignableFrom(property.PropertyType)) {
+							throw new InvalidOperationException(
+								string.Format("The OutputPort attribute on field '{0}' of component '{1}' is not valid, type must be IOutputPort but was '{1}'",
+								              property.Name, 
+							                  process.Name,
+							              	  property.PropertyType));
 
-							}
-							var outputPort = attr as OutputPortAttribute;
-							CreatePort(component, field, outputPort.Name);
 						}
+						var outputPort = attr as OutputPortAttribute;
+						process.SetOutputPort(property.Name, CreatePort(process, property, outputPort.Name) as IOutputPort);
 					}
 				}
 			}
 		}
 
-		public void AddComponent(Component component) {
-			components.Add(component);
+		public void AddProcess(Component process) {
+			processes.Add(process);
+			SetupPort(process);
 		}
 
-		public void Connect(Component firstComponent, string outPortName, Component secondComponent, string inPortName) {
-			var outPort = GetOutPortFromComponentNamed(firstComponent, outPortName);
-			var inPort = GetInPortFromComponentNamed(secondComponent, inPortName);
+		public void Connect(Component firstProcess, string outPortName, Component secondProcess, string inPortName) {
+			var outPort = GetOutPortFromProcessNamed(firstProcess, outPortName);
+			var inPort = GetInPortFromProcessNamed(secondProcess, inPortName);
 
 			if (!inPort.HasConnection) {
 				var connection = new Connection();
@@ -158,9 +225,9 @@ namespace NTransit {
 			outPort.Connection = inPort.Connection;
 		}
 
-		public void SetInitialData(Component component, string portName, object value) {
+		public void SetInitialData(Component process, string portName, object value) {
 			var ip = new InformationPacket(value);
-			var port = GetInPortFromComponentNamed(component, portName);
+			var port = GetInPortFromProcessNamed(process, portName);
 
 			if (!port.HasConnection) {
 				var connection = new Connection();
@@ -170,13 +237,15 @@ namespace NTransit {
 			port.Connection.SetInitialData(ip);
 		}
 
-		bool IsAutoStartComponent(Component component) {
+		bool IsAutoStartProcess(Component process) {
 			var autoStart = true;
+			IInputPort inputPort;
 
-			foreach (var field in component.GetType ().GetFields (BindingFlags.NonPublic | BindingFlags.Instance)) {
+			foreach (var field in process.GetType ().GetFields (BindingFlags.NonPublic | BindingFlags.Instance)) {
 				foreach (Attribute attr in field.GetCustomAttributes (true)) {
 					if (attr is InputPortAttribute) {
-						autoStart = autoStart && (field.GetValue(component) as IInputPort).Connection.IsInitialInformationPacket;
+						inputPort = (field.GetValue(process) as IInputPort);
+						autoStart = autoStart && inputPort.HasConnection && inputPort.Connection.IsInitialInformationPacket;
 					}
 				}
 			}
@@ -184,46 +253,50 @@ namespace NTransit {
 			return autoStart;
 		}
 
-		void CreatePort(Component component, FieldInfo field, string name) {
-			var createMethod = GetType().GetMethod("InstantiatePortForField", BindingFlags.NonPublic | BindingFlags.Instance).MakeGenericMethod(field.FieldType);
-			createMethod.Invoke(this, new object[] { component, field, name });
-		}
+		IPort CreatePort(Component process, PropertyInfo property, string name) {
+			var createMethod = GetType().GetMethod("InstantiatePortForField", BindingFlags.NonPublic | BindingFlags.Instance).MakeGenericMethod(property.PropertyType);
+			var port = createMethod.Invoke(this, new object[] { process, name }) as IPort;
 
-		T InstantiatePortForField<T>(Component component, FieldInfo field, string name) where T : IPort {
-			var port = Activator.CreateInstance<T>();
 			port.Name = name;
-			port.Component = component;
-			field.SetValue(component, port);
+			port.Process = process;
 			return port;
 		}
 
-		IOutputPort GetOutPortFromComponentNamed(Component component, string name) {
+		T InstantiatePortForField<T>(Component process, string name) where T : IPort {
+			var port = Activator.CreateInstance<T>();
+//			port.Name = name;
+//			port.Process = process;
+//			field.SetValue(process, port);
+			return port;
+		}
+
+		IOutputPort GetOutPortFromProcessNamed(Component process, string name) {
 			try {
-				var matchingField = component.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance).First(field => {
-					return field.GetCustomAttributes(true).FirstOrDefault(attr => {
+				var matchingProperty = process.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).First(property => {
+					return property.GetCustomAttributes(true).FirstOrDefault(attr => {
 						return (attr is OutputPortAttribute) && (attr as OutputPortAttribute).Name == name;
 					}) != null;
 				});
 
-				return matchingField.GetValue(component) as IOutputPort;
+				return matchingProperty.GetValue(process, null) as IOutputPort;
 			}
 			catch (InvalidOperationException) {
-				throw new InvalidOperationException(string.Format("Component '{0}' of type '{1}' does not contain an output port named '{2}'", component.Name, component.GetType(), name));
+				throw new InvalidOperationException(string.Format("Component '{0}' of type '{1}' does not contain an output port named '{2}'", process.Name, process.GetType(), name));
 			}
 		}
 
-		IInputPort GetInPortFromComponentNamed(Component component, string name) {
+		IInputPort GetInPortFromProcessNamed(Component process, string name) {
 			try {
-				var matchingField = component.GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance).First(field => {
+				var matchingProperty = process.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).First(field => {
 					return field.GetCustomAttributes(true).FirstOrDefault(attr => {
 						return (attr is InputPortAttribute) && (attr as InputPortAttribute).Name == name;
 					}) != null;
 				});
 
-				return matchingField.GetValue(component) as IInputPort;
+				return matchingProperty.GetValue(process, null) as IInputPort;
 			}
 			catch (InvalidOperationException) {
-				throw new InvalidOperationException(string.Format("Component '{0}' of type '{1}' does not contain an input port named '{2}'", component.Name, component.GetType(), name));
+				throw new InvalidOperationException(string.Format("Component '{0}' of type '{1}' does not contain an input port named '{2}'", process.Name, process.GetType(), name));
 			}
 		}
 	}

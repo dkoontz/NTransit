@@ -2,7 +2,7 @@ using System;
 using NUnit.Framework;
 using NTransit;
 
-namespace NTransit {
+namespace NTransitTest {
 	[TestFixture]
 	public class ConnectionTests {
 		[Test]

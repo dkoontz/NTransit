@@ -6,13 +6,13 @@ namespace NTransit {
 
 		public bool Closed { get; protected set; }
 
-		public Connection Connection { get; set; }
+		public IConnection Connection { get; set; }
 
 		public bool HasConnection { get { return Connection != null; } }
 
-		public Component Component { get; set; }
+		public Component Process { get; set; }
 
-		public bool HasComponent { get { return Component != null; } }
+		public bool HasComponent { get { return Process != null; } }
 
 		public bool HasPacketsWaiting { get { return !Connection.Empty; } }
 
@@ -22,7 +22,7 @@ namespace NTransit {
 			else if (Connection.Empty) throw new InvalidOperationException(string.Format("Cannot receive data from port {0}, it does not have any waiting packets", Name));
 
 			var packet = Connection.Receieve();
-			Component.ClaimIp(packet);
+			Process.ClaimIp(packet);
 			return packet;
 		}
 

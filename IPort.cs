@@ -6,11 +6,11 @@ namespace NTransit {
 
 		bool Closed { get; }
 
-		Connection Connection { get; set; }
+		IConnection Connection { get; set; }
 
 		bool HasConnection { get; }
 
-		Component Component { get; set; }
+		Component Process { get; set; }
 
 		bool HasComponent { get; }
 

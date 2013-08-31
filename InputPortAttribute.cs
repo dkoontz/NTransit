@@ -1,12 +1,9 @@
 using System;
 
 namespace NTransit {
-	[AttributeUsage(AttributeTargets.Field)]
-	public class InputPortAttribute : Attribute {
-		public string Name { get; private set; }
+	[AttributeUsage(AttributeTargets.Property)]
+	public class InputPortAttribute : PortAttribute {
 
-		public InputPortAttribute(string name) {
-			Name = name;
-		}
+		public InputPortAttribute(string name) : base(name) {}
 	}
 }

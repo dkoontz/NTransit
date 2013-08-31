@@ -122,16 +122,16 @@ namespace NTransit {
 					else if (current is WaitForPacketOrCapacityOnAny) {
 						var waitOnAny = current as WaitForPacketOrCapacityOnAny;
 						var anyAreReady = false;
-						UnityEngine.Debug.Log("WaitForPacketOrCapacityOnAny - checking inPorts");
+//						UnityEngine.Debug.Log("WaitForPacketOrCapacityOnAny - checking inPorts");
 						foreach (var port in waitOnAny.InputPorts) {
 							anyAreReady = anyAreReady || port.HasPacketsWaiting;
 						}
-						UnityEngine.Debug.Log("found inport with data: " + anyAreReady);
+//						UnityEngine.Debug.Log("found inport with data: " + anyAreReady);
 
 						foreach (var port in waitOnAny.OutputPorts) {
 							anyAreReady = anyAreReady || !port.Connection.Full;
 						}
-						UnityEngine.Debug.Log("found outport with capacity: " + anyAreReady);
+//						UnityEngine.Debug.Log("found outport with capacity: " + anyAreReady);
 
 						moveNext = anyAreReady;
 					} 
@@ -189,7 +189,7 @@ namespace NTransit {
 							              	  property.PropertyType));
 						}
 						var inputPort = attr as InputPortAttribute;
-						process.SetInputPort(property.Name, CreatePort(process, property, inputPort.Name) as IInputPort);
+						process.SetInputPort(inputPort.Name, CreatePort(process, property, inputPort.Name) as IInputPort);
 						inputPortList.Add(property.GetValue(process, null) as IInputPort);
 					}
 					else if (attr is OutputPortAttribute) {
@@ -202,7 +202,7 @@ namespace NTransit {
 
 						}
 						var outputPort = attr as OutputPortAttribute;
-						process.SetOutputPort(property.Name, CreatePort(process, property, outputPort.Name) as IOutputPort);
+						process.SetOutputPort(outputPort.Name, CreatePort(process, property, outputPort.Name) as IOutputPort);
 					}
 				}
 			}

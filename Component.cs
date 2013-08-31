@@ -95,21 +95,21 @@ namespace NTransit {
 			return new WaitForTime(timeToWait);
 		}
 
-		public void SetInputPort(string name, IInputPort port) {
+		public void SetInputPort(string attributeName, IInputPort port) {
 			var propertyToAssignTo = GetType().GetProperties().FirstOrDefault(property => {
-				return HasAttributeNamed<InputPortAttribute>(property, name);
+				return HasAttributeNamed<InputPortAttribute>(property, attributeName);
 			});
 
-			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the InputPort attribute", GetType(), name));
+			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the InputPort attribute", GetType(), attributeName));
 			propertyToAssignTo.SetValue(this, port, null);
 		}
 
-		public void SetOutputPort(string name, IOutputPort port) {
+		public void SetOutputPort(string attributeName, IOutputPort port) {
 			var propertyToAssignTo = GetType().GetProperties().FirstOrDefault(property => {
-				return HasAttributeNamed<OutputPortAttribute>(property, name);
+				return HasAttributeNamed<OutputPortAttribute>(property, attributeName);
 			});
 
-			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the OutputPort attribute", GetType(), name));
+			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the OutputPort attribute", GetType(), attributeName));
 			propertyToAssignTo.SetValue(this, port, null);
 		}
 

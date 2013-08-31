@@ -17,23 +17,24 @@ namespace NTransit {
 		}
 
 		public override IEnumerator Execute() {
-//			Console.WriteLine("In ip queue");
+//			UnityEngine.Debug.Log("In ip queue");
 			while (true) {
 //				UnityEngine.Debug.Log("Queue processing in and out ports, queue size: " + queue.Count);
 				while (InPort.HasPacketsWaiting) {
 					var ip = InPort.Receive();
 
-					if (InformationPacket.PacketType.StartSequence == ip.Type) {
-//						UnityEngine.Debug.Log("Queue started receiving sequence");
-						do {
-							queue.Enqueue(ip);
-							yield return WaitForPacketOn(InPort);
-							ip = InPort.Receive();
-//							UnityEngine.Debug.Log("Queue got next ip in sequence, type = " + ip.Type);
-						}
-						while (InformationPacket.PacketType.EndSequence != ip.Type);
-//						UnityEngine.Debug.Log("Queue done receving sequence");
-					}
+//					if (InformationPacket.PacketType.StartSequence == ip.Type) {
+////						UnityEngine.Debug.Log("Queue started receiving sequence");
+//						do {
+//							queue.Enqueue(ip);
+//
+//							yield return WaitForPacketOn(InPort);
+//							ip = InPort.Receive();
+////							UnityEngine.Debug.Log("Queue got next ip in sequence, type = " + ip.Type);
+//						}
+//						while (InformationPacket.PacketType.EndSequence != ip.Type);
+////						UnityEngine.Debug.Log("Queue done receving sequence");
+//					}
 
 //					Console.WriteLine("Enqueuing IP");
 					queue.Enqueue(ip);
@@ -47,7 +48,9 @@ namespace NTransit {
 //					else UnityEngine.Debug.Log("Queue's out connection doesn't have capacity to send packet (" + queue.Peek().Type + ") " + queue.Peek().Content);
 				}
 
+//				UnityEngine.Debug.Log("Queue - Yielding until packets arrive or capacity is available");
 				yield return new WaitForPacketOrCapacityOnAny(new [] { InPort }, new [] { OutPort });
+//				UnityEngine.Debug.Log("Queue - Woken up");
 			}
 		}
 	}

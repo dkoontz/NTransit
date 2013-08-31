@@ -35,7 +35,7 @@ namespace NTransit {
 						while (InformationPacket.PacketType.EndSequence != ip.Type);
 //						UnityEngine.Debug.Log("Gate - Done sending sequence");
 					}
-					UnityEngine.Debug.Log("Gate - sending (" + ip.Type + ") " + ip.Content);
+//					UnityEngine.Debug.Log("Gate - sending (" + ip.Type + ") " + ip.Content);
 					while (!OutPort.TrySend(ip)) yield return WaitForCapacityOn(OutPort);
 //					UnityEngine.Debug.Log("Gate - Done sending packet(s)");
 				}

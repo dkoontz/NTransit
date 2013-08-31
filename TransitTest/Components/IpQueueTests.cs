@@ -21,7 +21,7 @@ namespace NTransitTest {
 			var outPort = new StandardOutputPort();
 			outPort.Process = queue;
 
-			inPort.Connection = new MockConnection(1);
+			inPort.Connection = new MockConnection();
 			var outputConnection = new MockConnection(1000);
 			outPort.Connection = outputConnection;
 			queue.SetInputPort("In", inPort);
@@ -45,15 +45,17 @@ namespace NTransitTest {
 		[Test]
 		public void IpQueue_should_be_able_to_receive_packets_while_out_connection_is_full() {
 			var queue = new IpQueue("Queue");
+
 			var inPort = new StandardInputPort();
 			inPort.Process = queue;
+			inPort.Connection = new MockConnection();
+			queue.SetInputPort("In", inPort);
+
 			var outPort = new StandardOutputPort();
 			outPort.Process = queue;
-
-			inPort.Connection = new MockConnection(1);
 			outPort.Connection = new MockConnection(0);
-			queue.SetInputPort("In", inPort);
 			queue.SetOutputPort("Out", outPort);
+
 
 			var iterator = queue.Execute();
 

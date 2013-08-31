@@ -6,6 +6,8 @@ namespace NTransitTest {
 	public class MockConnection : IConnection {
 		public List<InformationPacket> Packets { get; set; }
 
+		public MockConnection() : this(1) {}
+
 		public MockConnection(int capacity) {
 			Packets = new List<InformationPacket>(capacity);
 			Capacity = capacity;

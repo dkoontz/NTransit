@@ -71,7 +71,7 @@ namespace NTransit {
 
 		public bool HasPacketOnAnyNonIipInputPort() {
 			foreach (var port in InputPorts) {
-				if (port.HasConnection && !port.Connection.IsInitialInformationPacket && !port.Connection.Empty) {
+				if (port.HasConnection && !port.Connection.HasInitialInformationPacket && !port.Connection.Empty) {
 					return true;
 				}
 			}
@@ -82,18 +82,6 @@ namespace NTransit {
 		// This method is called when the Network is told to shutdown
 		// Override this method to add your own cleanup logic
 		public virtual void Close() {}
-
-		protected WaitForPacketOn WaitForPacketOn(params IInputPort[] ports) {
-			return new WaitForPacketOn(ports);
-		}
-
-		protected WaitForCapacityOn WaitForCapacityOn(params IOutputPort[] ports) {
-			return new WaitForCapacityOn(ports);
-		}
-
-		protected WaitForTime WaitForTime(int timeToWait) {
-			return new WaitForTime(timeToWait);
-		}
 
 		public void SetInputPort(string attributeName, IInputPort port) {
 			var propertyToAssignTo = GetType().GetProperties().FirstOrDefault(property => {
@@ -111,6 +99,27 @@ namespace NTransit {
 
 			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the OutputPort attribute", GetType(), attributeName));
 			propertyToAssignTo.SetValue(this, port, null);
+		}
+
+		public void ResetInitialDataAvailability() {
+			foreach(var p in InputPorts) {
+				if (p.Connection.HasInitialInformationPacket) {
+					p.Connection.ResetInitialDataAvailability();
+				}
+			}
+		}
+
+
+		protected WaitForPacketOn WaitForPacketOn(params IInputPort[] ports) {
+			return new WaitForPacketOn(ports);
+		}
+
+		protected WaitForCapacityOn WaitForCapacityOn(params IOutputPort[] ports) {
+			return new WaitForCapacityOn(ports);
+		}
+
+		protected WaitForTime WaitForTime(int timeToWait) {
+			return new WaitForTime(timeToWait);
 		}
 
 		bool HasAttributeNamed<T>(PropertyInfo property, string name) where T : PortAttribute {

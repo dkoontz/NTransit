@@ -25,7 +25,7 @@ namespace NTransit {
 			get { return packets.Count; }
 		}
 
-		public bool IsInitialInformationPacket { get; private set; }
+		public bool HasInitialInformationPacket { get; private set; }
 
 		Queue<InformationPacket> packets;
 		IInputPort receiver;
@@ -73,7 +73,12 @@ namespace NTransit {
 
 		public void SetInitialData(InformationPacket ip) {
 			initialIp = ip;
-			IsInitialInformationPacket = true;
+			HasInitialInformationPacket = true;
+		}
+
+		public void ResetInitialDataAvailability() {
+			if (HasInitialInformationPacket) sentInitialData = false;
+			else throw new InvalidOperationException("Cannot reset initial data on a connection that has no initial data set");
 		}
 	}
 }

@@ -10,7 +10,7 @@ namespace NTransit {
 
 		int NumberOfPacketsHeld { get; }
 
-		bool IsInitialInformationPacket { get; }
+		bool HasInitialInformationPacket { get; }
 
 		bool SendPacketIfCapacityAllows(InformationPacket ip);
 
@@ -19,5 +19,7 @@ namespace NTransit {
 		void SetReceiver(IInputPort receiver);
 
 		void SetInitialData(InformationPacket ip);
+
+		void ResetInitialDataAvailability();
 	}
 }

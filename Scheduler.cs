@@ -154,6 +154,7 @@ namespace NTransit {
 				foreach (var process in processesThatHaveTerminated) {
 					currentlyRunningProcesses.Remove(process);
 					processExecutionStates.Remove(process);
+					process.ResetInitialDataAvailability();
 				}
 
 				var nonExecutingProcesses = processes.FindAll(c => !currentlyRunningProcesses.ContainsKey(c));
@@ -245,7 +246,7 @@ namespace NTransit {
 				foreach (Attribute attr in field.GetCustomAttributes (true)) {
 					if (attr is InputPortAttribute) {
 						inputPort = (field.GetValue(process) as IInputPort);
-						autoStart = autoStart && inputPort.HasConnection && inputPort.Connection.IsInitialInformationPacket;
+						autoStart = autoStart && inputPort.HasConnection && inputPort.Connection.HasInitialInformationPacket;
 					}
 				}
 			}

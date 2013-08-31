@@ -49,7 +49,7 @@ namespace NTransitTest {
 			get { return Packets.Count; }
 		}
 
-		public bool IsInitialInformationPacket {
+		public bool HasInitialInformationPacket {
 			get { throw new NotImplementedException("Mock connection does not support initial IPs"); }
 		}
 	}

@@ -101,7 +101,6 @@ namespace NTransitTest {
 				iterator.MoveNext();
 			}
 
-			Assert.AreEqual(7, outputConnection.Packets.Count);
 			Assert.AreEqual(InformationPacket.PacketType.StartSequence, outputConnection.Packets[0].Type);
 			Assert.AreEqual("Test data 0", outputConnection.Packets[1].Content);
 			Assert.AreEqual("Test data 1", outputConnection.Packets[2].Content);
@@ -110,5 +109,40 @@ namespace NTransitTest {
 			Assert.AreEqual("Test data 4", outputConnection.Packets[5].Content);
 			Assert.AreEqual(InformationPacket.PacketType.EndSequence, outputConnection.Packets[6].Type);
 		}
+
+		[Test]
+		public void IpQueue_should_be_able_to_receive_an_empty_sequence_and_forward_it() {
+			var queue = new IpQueue("Queue");
+			var inPort = new StandardInputPort();
+			inPort.Process = queue;
+			var outPort = new StandardOutputPort();
+			outPort.Process = queue;
+
+			inPort.Connection = new MockConnection(100);
+			var outputConnection = new MockConnection(100);
+			outPort.Connection = outputConnection;
+			queue.SetInputPort("In", inPort);
+			queue.SetOutputPort("Out", outPort);
+
+			var iterator = queue.Execute();
+
+			inPort.Connection.SendPacketIfCapacityAllows(new InformationPacket(InformationPacket.PacketType.StartSequence, null));
+			inPort.Connection.SendPacketIfCapacityAllows(new InformationPacket(InformationPacket.PacketType.EndSequence, null));
+
+			// Receive all the packets waiting on the in connection
+			do {
+				iterator.MoveNext();
+			}
+			while (!(iterator.Current is WaitForPacketOrCapacityOnAny));
+
+			// Send the packets to the out connection 
+			for (var i = 0; i < 2; ++i) {
+				iterator.MoveNext();
+			}
+
+			Assert.AreEqual(InformationPacket.PacketType.StartSequence, outputConnection.Packets[0].Type);
+			Assert.AreEqual(InformationPacket.PacketType.EndSequence, outputConnection.Packets[1].Type);
+		}
+
 	}
 }

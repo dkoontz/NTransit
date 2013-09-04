@@ -25,7 +25,7 @@ namespace NTransit {
 				}
 			}
 			catch (IOException ex) {
-				Errors.TrySend(ex);
+				ErrorsPort.TrySend(ex);
 				yield break;
 			}
 		}

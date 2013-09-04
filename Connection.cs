@@ -28,7 +28,7 @@ namespace NTransit {
 		public bool HasInitialInformationPacket { get; private set; }
 
 		Queue<InformationPacket> packets;
-		IInputPort receiver;
+		public IInputPort receiver;
 		InformationPacket initialIp;
 		bool sentInitialData;
 		readonly object lockObject = new object();

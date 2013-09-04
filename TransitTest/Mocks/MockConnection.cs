@@ -4,6 +4,24 @@ using NTransit;
 
 namespace NTransitTest {
 	public class MockConnection : IConnection {
+		public int Capacity { get; set; }
+
+		public bool Full {
+			get { return Packets.Count == Capacity; }
+		}
+
+		public bool Empty {
+			get { return 0 == Packets.Count; }
+		}
+
+		public int NumberOfPacketsHeld {
+			get { return Packets.Count; }
+		}
+
+		public bool HasInitialInformationPacket {
+			get { throw new NotImplementedException("Mock connection does not support initial IPs"); }
+		}
+
 		public List<InformationPacket> Packets { get; set; }
 
 		public MockConnection() : this(1) {}
@@ -35,22 +53,8 @@ namespace NTransitTest {
 			throw new NotImplementedException("Mock connection does not support initial IPs");
 		}
 
-		public int Capacity { get; set; }
-
-		public bool Full {
-			get { return Packets.Count == Capacity; }
-		}
-
-		public bool Empty {
-			get { return 0 == Packets.Count; }
-		}
-
-		public int NumberOfPacketsHeld {
-			get { return Packets.Count; }
-		}
-
-		public bool HasInitialInformationPacket {
-			get { throw new NotImplementedException("Mock connection does not support initial IPs"); }
+		public void ResetInitialDataAvailability() {
+			throw new NotImplementedException("Mock connection does not support initial IPs");
 		}
 	}
 }

@@ -42,7 +42,7 @@
     <Compile Include="Components\IpQueueTests.cs" />
     <Compile Include="Mocks\MockOutputPort.cs" />
     <Compile Include="Mocks\MockConnection.cs" />
-    <Compile Include="Components\GateTests.cs" />
+    <Compile Include="Components\CheckpointTests.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

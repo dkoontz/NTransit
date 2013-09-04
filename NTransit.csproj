@@ -57,12 +57,14 @@
     <Compile Include="Components\ConsoleWriter.cs" />
     <Compile Include="Components\RandomNumberGenerator.cs" />
     <Compile Include="Components\Delay.cs" />
-    <Compile Include="Components\Gate.cs" />
     <Compile Include="Components\IpQueue.cs" />
     <Compile Include="Components\PacketLogger.cs" />
     <Compile Include="Components\Drop.cs" />
     <Compile Include="PortAttribute.cs" />
     <Compile Include="IConnection.cs" />
+    <Compile Include="Components\Toggle.cs" />
+    <Compile Include="Components\Checkpoint.cs" />
+    <Compile Include="Components\Gate.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

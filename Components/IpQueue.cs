@@ -49,7 +49,8 @@ namespace NTransit {
 				}
 
 //				UnityEngine.Debug.Log("Queue - Yielding until packets arrive or capacity is available");
-				yield return new WaitForPacketOrCapacityOnAny(new [] { InPort }, new [] { OutPort });
+				if (queue.Count > 0) yield return new WaitForPacketOrCapacityOnAny(new [] { InPort }, new [] { OutPort });
+				else yield return WaitForPacketOn(InPort);
 //				UnityEngine.Debug.Log("Queue - Woken up");
 			}
 		}

@@ -22,7 +22,7 @@ namespace NTransit {
 				contents = reader.ReadToEnd();
 			}
 			catch (Exception ex) {
-				Errors.TrySend(ex);
+				ErrorsPort.TrySend(ex);
 				yield break;
 			}
 

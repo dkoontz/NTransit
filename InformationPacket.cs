@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace NTransit {
 	public class InformationPacket {
@@ -7,6 +8,12 @@ namespace NTransit {
 			EndSequence,
 			Content,
 		}
+
+		public static InformationPacket AutoPacket {
+			get { return new InformationPacket(null); }
+		}
+
+		public Dictionary<string, object> Attributes;
 
 		public object Content { get; private set; }
 
@@ -20,7 +27,5 @@ namespace NTransit {
 			Type = type;
 			Content = content;
 		}
-		// attributes
-		// children
 	}
 }

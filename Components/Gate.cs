@@ -1,43 +1,48 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace NTransit {
 	public class Gate : Component {
+
+		[InputPort("Open")]
+		public StandardInputPort OpenPort { get; set; }
+
+		[InputPort("Close")]
+		public StandardInputPort ClosePort { get; set; }
+
 		[InputPort("In")]
 		public StandardInputPort InPort { get; set; }
-
-		[InputPort("Trigger")]
-		public StandardInputPort TriggerPort { get; set; }
 
 		[OutputPort("Out")]
 		public StandardOutputPort OutPort { get; set; }
 
+		bool open;
+
 		public Gate(string name) : base(name) {}
 
 		public override IEnumerator Execute() {
+			UnityEngine.Debug.Log("************ Starting up gate");
 			while (true) {
-				yield return WaitForPacketOn(TriggerPort);
-				TriggerPort.Receive();
-//				UnityEngine.Debug.Log("Gate - Got trigger for gate");
+				yield return new WaitForPacketOrCapacityOnAny(ConnectedInputPorts, ConnectedOutputPorts);
 
-				if (InPort.HasPacketsWaiting) {
-//					UnityEngine.Debug.Log("Gate - packet(s) waiting for gate");
+				UnityEngine.Debug.Log("Gate - Checking for open port input");
+				if (OpenPort.HasConnection && OpenPort.HasPacketsWaiting) {
+					open = true;
+					while (OpenPort.HasPacketsWaiting) OpenPort.Receive();
+				}
+
+				UnityEngine.Debug.Log("Gate - Checking for closed port input");
+				if (ClosePort.HasConnection && ClosePort.HasPacketsWaiting) {
+					open = false;
+					while (ClosePort.HasPacketsWaiting) ClosePort.Receive();
+				}
+				
+				if (open && InPort.HasPacketsWaiting) {
+					UnityEngine.Debug.Log("Gate - Open and forwarding packet");
 					var ip = InPort.Receive();
-					if (InformationPacket.PacketType.StartSequence == ip.Type) {
-
-//						UnityEngine.Debug.Log("Gate - Sequence was waiting");
-						do {
-//							UnityEngine.Debug.Log("Gate - sending (" + ip.Type + ") " + ip.Content);
-							while (!OutPort.TrySend(ip)) yield return WaitForCapacityOn(OutPort);
-							yield return WaitForPacketOn(InPort);
-							ip = InPort.Receive();
-						}
-						while (InformationPacket.PacketType.EndSequence != ip.Type);
-//						UnityEngine.Debug.Log("Gate - Done sending sequence");
-					}
-//					UnityEngine.Debug.Log("Gate - sending (" + ip.Type + ") " + ip.Content);
 					while (!OutPort.TrySend(ip)) yield return WaitForCapacityOn(OutPort);
-//					UnityEngine.Debug.Log("Gate - Done sending packet(s)");
+					UnityEngine.Debug.Log("Gate - Done forwarding packet");
 				}
 			}
 		}

@@ -19,8 +19,8 @@ namespace NTransit {
 				yield return WaitForPacketOn(InPort);
 				var ip = InPort.Receive();
 				var logIp = new InformationPacket(string.Format("* (Time {0}) Packet ({1}) - {2}", DateTime.Now.Millisecond, ip.Type, ip.Content));
-				while (!LogPort.TrySend(logIp)) yield return WaitForCapacityOn(LogPort);
 				while (!OutPort.TrySend(ip)) yield return WaitForCapacityOn(OutPort);
+				while (!LogPort.TrySend(logIp)) yield return WaitForCapacityOn(LogPort);
 //				UnityEngine.Debug.Log("Done sending logged packet");
 			}
 		}

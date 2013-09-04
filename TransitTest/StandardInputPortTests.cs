@@ -16,8 +16,17 @@ namespace NTransitTest {
 		}
 
 		[Test]
+		public void InvalidOperationException_is_thrown_when_receiving_from_a_port_with_no_process() {
+			var port = new StandardInputPort();
+			Assert.Throws<InvalidOperationException>(() => {
+				port.Receive();
+			});
+		}
+
+		[Test]
 		public void InvalidOperationException_is_thrown_when_receiving_from_a_port_with_no_connection() {
 			var port = new StandardInputPort();
+			port.Process = new MockComponent();
 			Assert.Throws<InvalidOperationException>(() => {
 				port.Receive();
 			});

@@ -7,7 +7,6 @@ using System.Diagnostics;
 
 // Big TODO's:
 //
-// Attributes on IPs
 // FBP / Json importer
 // Auto ports
 // Support thread pool and individual threads
@@ -15,8 +14,11 @@ using System.Diagnostics;
 // Array Inputs
 // Array Outputs
 // Auto wire unconnected output ports to Drop component
+// Auto wire unconnected Errors component port to default ConsoleWriter or settable property
 // Closeable ports that cannot be re-opened due to incoming IPs
 // Figure out IP ownership and tracking/disposing
+// Allowing components to execute during Fixed/Late Update
+// Type checking of IP content at Port/Connection level based on parameter(s) to InputPort / OutputPort attributes
 
 namespace NTransit {
 	public interface IProcessRunner {
@@ -41,6 +43,7 @@ namespace NTransit {
 		List<Component> processes;
 		Dictionary<Component, IEnumerator> processExecutionStates;
 		LinkedList<Component> processesThatHaveTerminated;
+		LinkedList<Component> processesPendingAutoOutSend;
 		Dictionary<Component, bool> currentlyRunningProcesses;
 
 		bool shuttingDown;
@@ -53,6 +56,7 @@ namespace NTransit {
 			processes = new List<Component>();
 			processExecutionStates = new Dictionary<Component, IEnumerator>();
 			processesThatHaveTerminated = new LinkedList<Component>();
+			processesPendingAutoOutSend = new LinkedList<Component>();
 			currentlyRunningProcesses = new Dictionary<Component, bool>();
 		}
 
@@ -75,6 +79,7 @@ namespace NTransit {
 
 		public void Init() {
 			foreach (var process in processes) {
+				UnityEngine.Debug.Log("Auto start process: '" + process.Name + "'? " + IsAutoStartProcess(process));
 				if (IsAutoStartProcess(process)) {
 					processExecutionStates[process] = processRunner.Start(process);
 				}
@@ -96,7 +101,9 @@ namespace NTransit {
 				processesThatHaveTerminated.Clear();
 				currentlyRunningProcesses.Clear();
 
+//				UnityEngine.Debug.Log("Running scheduler processes: " + processExecutionStates.Count);
 				foreach (var kvp in processExecutionStates) {
+//					UnityEngine.Debug.Log("  - " + kvp.Key.Name);
 					moveNext = false;
 					currentlyRunningProcesses[kvp.Key] = true;
 					var current = kvp.Value.Current;
@@ -109,6 +116,7 @@ namespace NTransit {
 						}
 
 						if (allHavePacket) moveNext = true;
+						if (allHavePacket) UnityEngine.Debug.Log("Process: " + kvp.Key.Name + " has data on incoming port");
 					}
 					else if (current is WaitForCapacityOn) {
 						var waitForCapacity = current as WaitForCapacityOn;
@@ -118,28 +126,32 @@ namespace NTransit {
 						}
 
 						if (allHaveCapacity) moveNext = true;
+						if (allHaveCapacity) UnityEngine.Debug.Log("Process: " + kvp.Key.Name + " has capacity on outgoing port");
 					}
 					else if (current is WaitForPacketOrCapacityOnAny) {
 						var waitOnAny = current as WaitForPacketOrCapacityOnAny;
+						UnityEngine.Debug.Log("Checking: '" + kvp.Key.Name + "' for packet or capacity, inports: " + waitOnAny.InputPorts.Count() + " outports: " + waitOnAny.OutputPorts.Count());
 						var anyAreReady = false;
-//						UnityEngine.Debug.Log("WaitForPacketOrCapacityOnAny - checking inPorts");
 						foreach (var port in waitOnAny.InputPorts) {
+							UnityEngine.Debug.Log("port: " + port.Name + " packet waiting? " + port.HasPacketsWaiting);
 							anyAreReady = anyAreReady || port.HasPacketsWaiting;
 						}
-//						UnityEngine.Debug.Log("found inport with data: " + anyAreReady);
 
 						foreach (var port in waitOnAny.OutputPorts) {
+							UnityEngine.Debug.Log("port: " + port.Name + " capacity? " + !port.Connection.Full);
 							anyAreReady = anyAreReady || !port.Connection.Full;
 						}
-//						UnityEngine.Debug.Log("found outport with capacity: " + anyAreReady);
 
-						moveNext = anyAreReady;
+						if (anyAreReady) moveNext = anyAreReady;
+						if (anyAreReady) UnityEngine.Debug.Log("Process: " + kvp.Key.Name + " has packets on incoming port or capacity on outgoing port");
+
 					} 
 					else if (current is WaitForTime) {
 						var waitForTime = current as WaitForTime;
 						waitForTime.ElapsedTime += elapsedTime;
 
 						if (waitForTime.ElapsedTime >= waitForTime.Milliseconds) moveNext = true;
+						if (waitForTime.ElapsedTime >= waitForTime.Milliseconds) UnityEngine.Debug.Log("Process: " + kvp.Key.Name + " has reached wait time");
 					}
 					else {
 						moveNext = true;
@@ -152,15 +164,37 @@ namespace NTransit {
 				}
 
 				foreach (var process in processesThatHaveTerminated) {
+					UnityEngine.Debug.Log("Process: " + process.Name + " has terminated");
+					if (process.AutoOutPort.HasConnection) processesPendingAutoOutSend.AddLast(process);
 					currentlyRunningProcesses.Remove(process);
 					processExecutionStates.Remove(process);
 					process.ResetInitialDataAvailability();
 				}
 
+				var processThatHaveCompletedAutoSend = new Queue<Component>();
+				foreach (var process in processesPendingAutoOutSend) {
+					UnityEngine.Debug.Log("process: " + process.Name + " sending auto out");
+					if (process.AutoOutPort.TrySend(InformationPacket.AutoPacket)) {
+						UnityEngine.Debug.Log("auto out sent");
+						processThatHaveCompletedAutoSend.Enqueue(process);
+					}
+				}
+				while (processThatHaveCompletedAutoSend.Count > 0) {
+					processesPendingAutoOutSend.Remove(processThatHaveCompletedAutoSend.Dequeue());
+				}
+
+//				UnityEngine.Debug.Log(" ======= PROCESS LIST ========");
+//				foreach (var p in processes) {
+//					UnityEngine.Debug.Log(p.Name);
+//				}
+//				UnityEngine.Debug.Log(" ======= PROCESS LIST END ========");
+
 				var nonExecutingProcesses = processes.FindAll(c => !currentlyRunningProcesses.ContainsKey(c));
 
 				foreach (var process in nonExecutingProcesses) {
+					UnityEngine.Debug.Log(process.Name + " has waiting packets? " + (process.HasPacketOnAnyNonIipInputPort()));
 					if (process.HasPacketOnAnyNonIipInputPort()) {
+						UnityEngine.Debug.Log(process.Name + " has incoming packets and was woken up");
 						processExecutionStates[process] = processRunner.Start(process);
 					}
 				}
@@ -174,10 +208,12 @@ namespace NTransit {
 			shuttingDown = true;
 		}
 
-		void SetupPort(Component process) {
+		void SetupPorts(Component process) {
 			var inputPortList = new List<IInputPort>();
-			var inputPortListProperty = process.GetType().GetProperty("InputPorts", BindingFlags.Public | BindingFlags.Instance);
-			inputPortListProperty.SetValue(process, inputPortList, null);
+			var outputPortList = new List<IOutputPort>();
+
+//			var inputPortListProperty = process.GetType().GetProperty("InputPorts", BindingFlags.Public | BindingFlags.Instance);
+//			inputPortListProperty.SetValue(process, inputPortList, null);
 
 			foreach (var property in process.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
 				foreach (Attribute attr in property.GetCustomAttributes(true)) {
@@ -207,11 +243,15 @@ namespace NTransit {
 					}
 				}
 			}
+			process.InputPorts = inputPortList.ToArray();
+			process.OutputPorts = outputPortList.ToArray();
+			process.ConnectedInputPorts = inputPortList.Where(p => p.HasConnection).ToArray();
+			process.ConnectedOutputPorts = outputPortList.Where(p => p.HasConnection).ToArray();
 		}
 
 		public void AddProcess(Component process) {
 			processes.Add(process);
-			SetupPort(process);
+			SetupPorts(process);
 		}
 
 		public void Connect(Component firstProcess, string outPortName, Component secondProcess, string inPortName) {
@@ -242,11 +282,15 @@ namespace NTransit {
 			var autoStart = true;
 			IInputPort inputPort;
 
-			foreach (var field in process.GetType ().GetFields (BindingFlags.NonPublic | BindingFlags.Instance)) {
-				foreach (Attribute attr in field.GetCustomAttributes (true)) {
+//			UnityEngine.Debug.Log("Checking '" + process.Name + "' for auto start");
+			foreach (var property in process.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
+//				UnityEngine.Debug.Log("- checking " + property.Name);
+				foreach (Attribute attr in property.GetCustomAttributes(true)) {
 					if (attr is InputPortAttribute) {
-						inputPort = (field.GetValue(process) as IInputPort);
+						inputPort = (property.GetValue(process, null) as IInputPort);
 						autoStart = autoStart && inputPort.HasConnection && inputPort.Connection.HasInitialInformationPacket;
+						UnityEngine.Debug.Log("checking port: '" + inputPort.Name + "connection: " + inputPort.HasConnection);
+						if (inputPort.HasConnection) UnityEngine.Debug.Log("  has initial data: " + inputPort.Connection.HasInitialInformationPacket);
 					}
 				}
 			}
@@ -265,13 +309,12 @@ namespace NTransit {
 
 		T InstantiatePortForField<T>(Component process, string name) where T : IPort {
 			var port = Activator.CreateInstance<T>();
-//			port.Name = name;
-//			port.Process = process;
-//			field.SetValue(process, port);
 			return port;
 		}
 
 		IOutputPort GetOutPortFromProcessNamed(Component process, string name) {
+//			if ("*" == name) return process.AutoOutPort;
+
 			try {
 				var matchingProperty = process.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).First(property => {
 					return property.GetCustomAttributes(true).FirstOrDefault(attr => {
@@ -287,6 +330,8 @@ namespace NTransit {
 		}
 
 		IInputPort GetInPortFromProcessNamed(Component process, string name) {
+//			if ("*" == name) return process.AutoInPort;
+
 			try {
 				var matchingProperty = process.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).First(field => {
 					return field.GetCustomAttributes(true).FirstOrDefault(attr => {

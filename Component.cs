@@ -44,11 +44,20 @@ namespace NTransit {
 	public abstract class Component {
 		public string Name { get; protected set; }
 
+		[InputPort("AUTO_IN")]
+		public StandardInputPort AutoInPort { get; set; }
+
+		[OutputPort("AUTO_OUT")]
+		public StandardOutputPort AutoOutPort { get; set; }
+
 		[OutputPort("Errors")]
-		protected StandardOutputPort Errors { get; set; }
+		public StandardOutputPort ErrorsPort { get; set; }
 
 		// This is set automatically during port creation by the scheduler
-		public List<IInputPort> InputPorts { private get ; set; }
+		public IInputPort[] InputPorts { protected get ; set; }
+		public IOutputPort[] OutputPorts { protected get ; set; }
+		public IInputPort[] ConnectedInputPorts { protected get ; set; }
+		public IOutputPort[] ConnectedOutputPorts { protected get ; set; }
 
 		protected Component(string name) {
 			Name = name;
@@ -103,12 +112,11 @@ namespace NTransit {
 
 		public void ResetInitialDataAvailability() {
 			foreach(var p in InputPorts) {
-				if (p.Connection.HasInitialInformationPacket) {
+				if (p.HasConnection && p.Connection.HasInitialInformationPacket) {
 					p.Connection.ResetInitialDataAvailability();
 				}
 			}
 		}
-
 
 		protected WaitForPacketOn WaitForPacketOn(params IInputPort[] ports) {
 			return new WaitForPacketOn(ports);

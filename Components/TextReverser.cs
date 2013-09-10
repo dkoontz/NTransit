@@ -2,13 +2,12 @@ using System;
 using System.Text;
 
 namespace NTransit {
-	[InputPort("In")]
-	[OutputPort("Out")]
-	public class TextReverser : Component {
+	public class TextReverser : PropagatorComponent {
 		public TextReverser(string name) : base(name) {}
 
 		public override void Init() {
-			OnReceive("In", data => {
+			base.Init();
+			Receive["In"] = data => {
 				var ip = data.Accept();
 				var content = ip.ContentAs<string>();
 				var builder = new StringBuilder(content.Length);
@@ -18,7 +17,7 @@ namespace NTransit {
 				ip.Content = builder.ToString();
 
 				Send("Out", ip);
-			});
+			};
 		}
 	}
 }

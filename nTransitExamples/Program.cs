@@ -6,32 +6,31 @@ using System.Threading.Tasks.Dataflow;
 namespace NTransitExamples {
 	class MainClass {
 		public static void Main() {
+			var reader = new FileReader("File reader");
+			var fileNamePort = new StandardInputPort(1, reader);
+			reader.SetInputPort("File Name", fileNamePort);
+			reader.SetOutputPort("Out", new StandardOutputPort());
+			reader.Init();
+
 			var reverser = new TextReverser("Text reverser");
-			var inPort = new StandardInputPort(1);
-			var outPort = new StandardOutputPort();
-			reverser.SetInputPort("In", inPort);
-			reverser.SetOutputPort("Out", outPort);
+			reverser.CreatePorts();
 			reverser.Init();
 
-			var testReceiver = new StandardInputPort(1);
-			outPort.ConnectTo(testReceiver);
+			var writer = new ConsoleWriter("Log");
+			writer.CreatePorts();
+			writer.Init();
 
-			testReceiver.Receive = ipOffer => {
-				Console.WriteLine("Got data from reverser");
-				Console.WriteLine(ipOffer.Accept().ContentAs<string>());
-			};
+			reader.ConnectPorts("Out", reverser, "In", 3);
+			reverser.ConnectPorts("Out", writer, "In");
 
-			Console.WriteLine(inPort.TryReceive(new InformationPacket("hello world")));
-			reverser.Tick();
+			fileNamePort.SetInitialData(new InformationPacket("test.txt"));
 
-			Console.WriteLine(inPort.TryReceive(new InformationPacket("foo bar baz")));
-			reverser.Tick();
+			var processes = new Component[] { reader, reverser, writer };
 
-			testReceiver.Tick();
-			reverser.Tick();
-			testReceiver.Tick();
-
-			Console.ReadKey();
+			for (var i = 0; i < 10; ++i) {
+				Console.WriteLine("Tick ==========");
+				foreach (var process in processes) process.Tick();
+			}
 		}
 	}
 }

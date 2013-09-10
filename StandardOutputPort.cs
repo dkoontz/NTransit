@@ -4,6 +4,7 @@ using System.Collections.Generic;
 namespace NTransit {
 	public class StandardOutputPort {
 		public string Name { get; set; }
+		public bool HasCapacity { get { return connectedPort.HasCapacity; } }
 
 		StandardInputPort connectedPort;
 
@@ -12,7 +13,7 @@ namespace NTransit {
 		}
 
 		public bool TrySend(InformationPacket ip) {
-			return connectedPort.TryReceive(ip);
+			return connectedPort.TrySend(ip);
 		}
 	}
 }

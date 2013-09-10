@@ -54,6 +54,12 @@
     <Compile Include="OutputPortAttribute.cs" />
     <Compile Include="PortAttribute.cs" />
     <Compile Include="Components\TextReverser.cs" />
+    <Compile Include="Components\FileReader.cs" />
+    <Compile Include="Components\ConsoleWriter.cs" />
+    <Compile Include="Components\ConvertIEnumerableToInformationPacketStream.cs" />
+    <Compile Include="TransformComponent.cs" />
+    <Compile Include="SourceComponent.cs" />
+    <Compile Include="EndpointComponent.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

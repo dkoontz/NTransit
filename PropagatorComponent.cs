@@ -4,11 +4,9 @@ namespace NTransit {
 	[InputPort("In")]
 	[OutputPort("Out")]
 	public abstract class PropagatorComponent : Component {
-		protected PropagatorComponent(string name) : base(name) {}
-
-		public override void Init() {
-			SequenceStart["In"] = id => SendSequenceStart("Out", id);
-			SequenceEnd["In"] = id => SendSequenceEnd("Out", id);
+		protected PropagatorComponent(string name) : base(name) {
+			SequenceStart["In"] = data => Send("Out", data.Accept());
+			SequenceEnd["In"] = data => Send("Out", data.Accept());
 		}
 	}
 }

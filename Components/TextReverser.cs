@@ -3,10 +3,7 @@ using System.Text;
 
 namespace NTransit {
 	public class TextReverser : PropagatorComponent {
-		public TextReverser(string name) : base(name) {}
-
-		public override void Init() {
-			base.Init();
+		public TextReverser(string name) : base(name) {
 			Receive["In"] = data => {
 				var ip = data.Accept();
 				var content = ip.ContentAs<string>();

@@ -5,22 +5,23 @@ using System.Collections.Generic;
 namespace NTransit {
 	[InputPort("IEnumerable")]
 	public class ConvertIEnumerableToInformationPacketStream : SourceComponent {
-		public ConvertIEnumerableToInformationPacketStream(string name) : base(name) {}
-
 		IEnumerator iterator;
 
-		public override void Init() {
+		public ConvertIEnumerableToInformationPacketStream(string name) : base(name) {
 			Receive["IEnumerable"] = data => {
 				iterator = data.Accept().ContentAs<IEnumerable>().GetEnumerator();
-				HasCompleted = !iterator.MoveNext();
+				SendSequenceStart("Out");
+				if (!iterator.MoveNext()) Status = ProcessStatus.Completed;
 			};
-
+			
 			Update = () => {
-				while (HasCapacity("Out") && !HasCompleted) {
+				while (HasCapacity("Out") && Status == ProcessStatus.Active) {
 					SendNew("Out", iterator.Current);
-					HasCompleted = !iterator.MoveNext();
+					if (!iterator.MoveNext()) Status = ProcessStatus.Completed;
 				}
 			};
+			
+			End = () => SendSequenceEnd("Out");
 		}
 	}
 }

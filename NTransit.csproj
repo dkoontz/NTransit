@@ -57,9 +57,10 @@
     <Compile Include="Components\FileReader.cs" />
     <Compile Include="Components\ConsoleWriter.cs" />
     <Compile Include="Components\ConvertIEnumerableToInformationPacketStream.cs" />
-    <Compile Include="TransformComponent.cs" />
     <Compile Include="SourceComponent.cs" />
     <Compile Include="EndpointComponent.cs" />
+    <Compile Include="PropagatorComponent.cs" />
+    <Compile Include="AutoStartAttribute.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

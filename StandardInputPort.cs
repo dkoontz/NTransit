@@ -9,11 +9,12 @@ namespace NTransit {
 		public bool Greedy { get; set; }
 		public int ConnectionCapacity { get; set; }
 		public bool HasCapacity { get { return queue.Count < ConnectionCapacity; } }
+		public bool HasInitialData { get { return initialIp != null; } }
 		public int QueuedPacketCount { get { return queue.Count; } }
 
 		public Action<IpOffer> Receive;
-		public Action<int> SequenceStart;
-		public Action<int> SequenceEnd;
+		public Action<IpOffer> SequenceStart;
+		public Action<IpOffer> SequenceEnd;
 
 		object lockObject = new object();
 		Queue<InformationPacket> queue;
@@ -25,6 +26,8 @@ namespace NTransit {
 			this.ConnectionCapacity = connectionCapacity;
 			queue = new Queue<InformationPacket>(connectionCapacity);
 			Process = process;
+			SequenceStart = data => data.Accept();
+			SequenceEnd = data => data.Accept();
 		}
 
 		public void SetInitialData(InformationPacket ip) {
@@ -46,15 +49,15 @@ namespace NTransit {
 			if (null == Receive) return;
 
 			if (ipOffer != null) {
-				Receive(ipOffer);
+				DispatchOffer(ipOffer);
 			}
 			else if (!initialIpSent && initialIp != null) {
 				ipOffer = new IpOffer(initialIp);
-				Receive(ipOffer);
+				DispatchOffer(ipOffer);
 			}
 			else if (queue.Count > 0) {
 				ipOffer = new IpOffer(queue.Peek());
-				Receive(ipOffer);
+				DispatchOffer(ipOffer);
 			}
 
 			if (ipOffer != null && ipOffer.Accepted) {
@@ -62,6 +65,20 @@ namespace NTransit {
 				else queue.Dequeue();
 
 				ipOffer = null;
+			}
+		}
+
+		void DispatchOffer(IpOffer offer) {
+			switch (offer.Type) {
+				case InformationPacket.PacketType.Data:
+					Receive(offer);
+					break;
+				case InformationPacket.PacketType.StartSequence:
+					SequenceStart(offer);
+					break;
+				case InformationPacket.PacketType.EndSequence:
+					SequenceEnd(offer);
+					break;
 			}
 		}
 	}

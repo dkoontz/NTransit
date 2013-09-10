@@ -1,7 +1,7 @@
 using System;
 
 namespace NTransit {
-	[AttributeUsage(AttributeTargets.Property)]
+	[AttributeUsage(AttributeTargets.Class)]
 	public class InputPortAttribute : PortAttribute {
 
 		public InputPortAttribute(string name) : base(name) {}

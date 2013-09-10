@@ -5,133 +5,82 @@ using System.Linq;
 using System.Reflection;
 
 namespace NTransit {
-	public class WaitForPacketOn {
-		public IInputPort[] Ports { get; private set; }
-
-		public WaitForPacketOn(IInputPort[] ports) {
-			Ports = ports;
-		}
-	}
-
-	public class WaitForCapacityOn {
-		public IOutputPort[] Ports { get; private set; }
-
-		public WaitForCapacityOn(IOutputPort[] ports) {
-			Ports = ports;
-		}
-	}
-
-	public class WaitForTime {
-		public long Milliseconds { get; private set; }
-
-		public long ElapsedTime { get; set; }
-
-		public WaitForTime(int milliseconds) {
-			Milliseconds = milliseconds;
-		}
-	}
-
-	public class WaitForPacketOrCapacityOnAny {
-		public IInputPort[] InputPorts { get; private set; }
-		public IOutputPort[] OutputPorts { get; private set; }
-
-		public WaitForPacketOrCapacityOnAny(IInputPort[] inPorts, IOutputPort[] outPorts) {
-			InputPorts = inPorts;
-			OutputPorts = outPorts;
-		}
-	}
-
+	[OutputPort("Errors")]
 	public abstract class Component {
+		class PendingPacket {
+			public string Port;
+			public InformationPacket Ip;
+
+			public PendingPacket(string port, InformationPacket ip) {
+				Port = port;
+				Ip = ip;
+			}
+		}
+
 		public string Name { get; protected set; }
 
-		[InputPort("AUTO_IN")]
-		public StandardInputPort AutoInPort { get; set; }
-
-		[OutputPort("AUTO_OUT")]
-		public StandardOutputPort AutoOutPort { get; set; }
-
-		[OutputPort("Errors")]
-		public StandardOutputPort ErrorsPort { get; set; }
-
-		// This is set automatically during port creation by the scheduler
-		public IInputPort[] InputPorts { protected get ; set; }
-		public IOutputPort[] OutputPorts { protected get ; set; }
-		public IInputPort[] ConnectedInputPorts { protected get ; set; }
-		public IOutputPort[] ConnectedOutputPorts { protected get ; set; }
+		Dictionary<string, StandardInputPort> inPorts;
+		Dictionary<string, StandardOutputPort> outPorts;
+		Queue<PendingPacket> pendingPackets;
 
 		protected Component(string name) {
 			Name = name;
-			ownedIps = new LinkedList<InformationPacket>();
+			inPorts = new Dictionary<string, StandardInputPort>();
+			outPorts = new Dictionary<string, StandardOutputPort>();
+			pendingPackets = new Queue<PendingPacket>();
 		}
 
-		LinkedList<InformationPacket> ownedIps;
+		public abstract void Init();
 
-		public abstract IEnumerator Execute();
-
-		public void ClaimIp(InformationPacket ip) {
-			ip.Owner = this;
-			ownedIps.AddLast(ip);
+		public void SetInputPort(string name, StandardInputPort port) {
+			port.Name = name;
+			inPorts[name] = port;
 		}
 
-		public void ReleaseIp(InformationPacket ip) {
-			ip.Owner = null;
-			ownedIps.Remove(ip);
+		public void SetOutputPort(string name, StandardOutputPort port) {
+			port.Name = name;
+			outPorts[name] = port;
+			pendingPackets = new Queue<PendingPacket>();
 		}
 
-		public bool HasPacketOnAnyNonIipInputPort() {
-			foreach (var port in InputPorts) {
-				if (port.HasConnection && !port.Connection.HasInitialInformationPacket && !port.Connection.Empty) {
-					return true;
+		public void Tick() {
+			PendingPacket firstPacket = null;
+			while (pendingPackets.Count > 0 && firstPacket != pendingPackets.Peek()) {
+				var pendingPacket = pendingPackets.Dequeue();
+				if (!outPorts[pendingPacket.Port].TrySend(pendingPacket.Ip)) {
+					if (null == firstPacket) firstPacket = pendingPacket;
+					pendingPackets.Enqueue(pendingPacket);
 				}
 			}
 
-			return false;
-		}
-
-		// This method is called when the Network is told to shutdown
-		// Override this method to add your own cleanup logic
-		public virtual void Close() {}
-
-		public void SetInputPort(string attributeName, IInputPort port) {
-			var propertyToAssignTo = GetType().GetProperties().FirstOrDefault(property => {
-				return HasAttributeNamed<InputPortAttribute>(property, attributeName);
-			});
-
-			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the InputPort attribute", GetType(), attributeName));
-			propertyToAssignTo.SetValue(this, port, null);
-		}
-
-		public void SetOutputPort(string attributeName, IOutputPort port) {
-			var propertyToAssignTo = GetType().GetProperties().FirstOrDefault(property => {
-				return HasAttributeNamed<OutputPortAttribute>(property, attributeName);
-			});
-
-			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the OutputPort attribute", GetType(), attributeName));
-			propertyToAssignTo.SetValue(this, port, null);
-		}
-
-		public void ResetInitialDataAvailability() {
-			foreach(var p in InputPorts) {
-				if (p.HasConnection && p.Connection.HasInitialInformationPacket) {
-					p.Connection.ResetInitialDataAvailability();
-				}
+			foreach (var kvp in inPorts) {
+				kvp.Value.Tick();
 			}
+
+			Update();
 		}
 
-		protected WaitForPacketOn WaitForPacketOn(params IInputPort[] ports) {
-			return new WaitForPacketOn(ports);
+		public void Start() { }
+		public void End() { }
+		public void Update() { }
+
+		protected void OnReceive(string port, Action<IpOffer> callback) {
+			inPorts[port].Receive = callback;
 		}
 
-		protected WaitForCapacityOn WaitForCapacityOn(params IOutputPort[] ports) {
-			return new WaitForCapacityOn(ports);
+		protected void SendNew(string port, object o) {
+			Send(port, new InformationPacket(o));
 		}
 
-		protected WaitForTime WaitForTime(int timeToWait) {
-			return new WaitForTime(timeToWait);
+		protected void SendNew(string port, object o, Dictionary<string, object> attributes) {
+			Send(port, new InformationPacket(o, attributes));
 		}
 
-		bool HasAttributeNamed<T>(PropertyInfo property, string name) where T : PortAttribute {
-			return null != property.GetCustomAttributes(true).FirstOrDefault(attr => attr is T && (attr as T).Name == name);
+		protected void Send(string port, InformationPacket ip) {
+			if (!outPorts.ContainsKey(port)) throw new ArgumentException(string.Format("There is no out port named '{0}' on component '{1}'", port, Name));
+			if (!outPorts[port].TrySend(ip)) {
+				pendingPackets.Enqueue(new PendingPacket(port, ip));
+			}
 		}
 	}
 }

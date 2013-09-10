@@ -1,41 +1,37 @@
 using System;
 using NTransit;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace NTransitExamples {
 	class MainClass {
 		public static void Main() {
-			var scheduler = new Scheduler();
+			var reverser = new TextReverser("Text reverser");
+			var inPort = new StandardInputPort(1);
+			var outPort = new StandardOutputPort();
+			reverser.SetInputPort("In", inPort);
+			reverser.SetOutputPort("Out", outPort);
+			reverser.Init();
 
-			var consoleWriter = new ConsoleWriter("Console Output");
-			scheduler.AddProcess(consoleWriter);
+			var testReceiver = new StandardInputPort(1);
+			outPort.ConnectTo(testReceiver);
 
-			// File read and write example
+			testReceiver.Receive = ipOffer => {
+				Console.WriteLine("Got data from reverser");
+				Console.WriteLine(ipOffer.Accept().ContentAs<string>());
+			};
 
-			//			var reader = new FileReader ("Get File Contents");
-			//			scheduler.AddComponent (reader);
-			//
-			//			var writer = new FileWriter ("Write File Contents");
-			//			scheduler.AddComponent (writer);
-			//
-			//			scheduler.Connect (reader, "File Contents", writer, "Text To Write");
-			//			scheduler.Connect (reader, "Errors", consoleWriter, "In");
-			//			scheduler.Connect (writer, "Errors", consoleWriter, "In");
-			//			scheduler.SetInitialData (reader, "File Name", "test1.txt");
-			//			scheduler.SetInitialData (writer, "File Name", "test2.txt");
+			Console.WriteLine(inPort.TryReceive(new InformationPacket("hello world")));
+			reverser.Tick();
 
+			Console.WriteLine(inPort.TryReceive(new InformationPacket("foo bar baz")));
+			reverser.Tick();
 
-			// Random number generator with delay example
-			var rng = new RandomNumberGenerator("Number generator");
-			scheduler.AddProcess(rng);
+			testReceiver.Tick();
+			reverser.Tick();
+			testReceiver.Tick();
 
-			var delay = new Delay("Delayer");
-			scheduler.AddProcess(delay);
-
-			scheduler.Connect(rng, "Number", delay, "In");
-			scheduler.Connect(delay, "Out", consoleWriter, "In");
-			scheduler.SetInitialData(delay, "Seconds Between Packets", .5f);
-
-			scheduler.AutoRun();
+			Console.ReadKey();
 		}
 	}
 }

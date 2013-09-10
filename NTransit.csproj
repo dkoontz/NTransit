@@ -37,34 +37,23 @@
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\Applications\Unity\Unity.app\Contents\Frameworks\Managed\UnityEngine.dll</HintPath>
     </Reference>
+    <Reference Include="System.Threading">
+      <HintPath>lib\System.Threading.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Dataflow">
+      <HintPath>lib\System.Threading.Tasks.Dataflow.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Component.cs" />
-    <Compile Include="IInputPort.cs" />
-    <Compile Include="IOutputPort.cs" />
-    <Compile Include="Network.cs" />
     <Compile Include="StandardInputPort.cs" />
-    <Compile Include="Connection.cs" />
     <Compile Include="InformationPacket.cs" />
     <Compile Include="StandardOutputPort.cs" />
-    <Compile Include="Components\FileReader.cs" />
     <Compile Include="InputPortAttribute.cs" />
     <Compile Include="OutputPortAttribute.cs" />
-    <Compile Include="Components\FileWriter.cs" />
-    <Compile Include="IPort.cs" />
-    <Compile Include="Scheduler.cs" />
-    <Compile Include="Components\ConsoleWriter.cs" />
-    <Compile Include="Components\RandomNumberGenerator.cs" />
-    <Compile Include="Components\Delay.cs" />
-    <Compile Include="Components\IpQueue.cs" />
-    <Compile Include="Components\PacketLogger.cs" />
-    <Compile Include="Components\Drop.cs" />
     <Compile Include="PortAttribute.cs" />
-    <Compile Include="IConnection.cs" />
-    <Compile Include="Components\Toggle.cs" />
-    <Compile Include="Components\Checkpoint.cs" />
-    <Compile Include="Components\Gate.cs" />
+    <Compile Include="Components\TextReverser.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

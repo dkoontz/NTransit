@@ -1,40 +1,56 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace NTransit {
-	public class StandardInputPort : IInputPort {
+	public class StandardInputPort {
 		public string Name { get; set; }
-
-		public bool Closed { get; protected set; }
-
-		public IConnection Connection { get; set; }
-
-		public bool HasConnection { get { return Connection != null; } }
-
 		public Component Process { get; set; }
+		public bool Greedy { get; set; }
 
-		public bool HasComponent { get { return Process != null; } }
+		public Action<IpOffer> Receive;
 
-		public bool HasPacketsWaiting { 
-			get { 
-				if (null == Connection) throw new InvalidOperationException(string.Format("Cannot check for waiting packets from port '{0}' on '{1}' it does not have a connection", Name, Process.Name));
+		object lockObject = new object();
+		int connectionCapacity;
+		Queue<InformationPacket> queue;
+		IpOffer ipOffer;
 
-				return !Connection.Empty; 
-			} 
+		public StandardInputPort(int connectionCapacity) : this(connectionCapacity, true) {}
+
+		public StandardInputPort(int connectionCapacity, bool greedy) {
+			this.connectionCapacity = connectionCapacity;
+			queue = new Queue<InformationPacket>(connectionCapacity);
+			Greedy = greedy;
 		}
 
-		public InformationPacket Receive() {
-			if (null == Process) throw new InvalidOperationException(string.Format("Cannot receive data from port '{0}', it is not assigned to a process", Name));
-			if (Closed) throw new InvalidOperationException(string.Format("Cannot receive data from port '{0}' on '{1}', it is closed", Name, Process.Name));
-			else if (null == Connection) throw new InvalidOperationException(string.Format("Cannot receive data from port '{0}' on '{1}', it does not have a connection", Name, Process.Name));
-			else if (Connection.Empty) throw new InvalidOperationException(string.Format("Cannot receive data from port '{0} on '{1}', it does not have any waiting packets", Name, Process.Name));
-
-			var packet = Connection.Receieve();
-			Process.ClaimIp(packet);
-			return packet;
+		public bool TryReceive(InformationPacket ip) {
+			lock (lockObject) {
+				if (queue.Count < connectionCapacity) {
+					queue.Enqueue(ip);
+					return true;
+				}
+				
+				return false;
+			}
 		}
 
-		public void Close() {
-			Closed = true;
+		public void Tick() {
+			if (null == Receive) return;
+
+			if (ipOffer != null) {
+				Receive(ipOffer);
+			}
+			else if (queue.Count > 0) {
+				ipOffer = new IpOffer(queue.Peek());
+				Receive(ipOffer);
+			}
+
+			if (ipOffer != null && ipOffer.Accepted) {
+				ipOffer = null;
+				queue.Dequeue();
+			}
 		}
 	}
 }

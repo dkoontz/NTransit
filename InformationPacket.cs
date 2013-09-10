@@ -2,30 +2,40 @@ using System;
 using System.Collections.Generic;
 
 namespace NTransit {
+	public class IpOffer {
+		public bool Accepted { get { return accepted; } }
+
+		InformationPacket ip;
+		bool accepted;
+
+		public IpOffer(InformationPacket ip) {
+			this.ip = ip;
+		}
+
+		public InformationPacket Accept() {
+			accepted = true;
+			return ip;
+		}
+	}
+
 	public class InformationPacket {
-		public enum PacketType {
-			StartSequence,
-			EndSequence,
-			Content,
-		}
-
-		public static InformationPacket AutoPacket {
-			get { return new InformationPacket(null); }
-		}
-
 		public Dictionary<string, object> Attributes;
 
-		public object Content { get; private set; }
+		public object Content { get; set; }
 
-		public PacketType Type { get; private set; }
+		public T ContentAs<T>() {
+			return (T)Content;
+		}
 
-		public object Owner { get; set; }
-
-		public InformationPacket(object content) : this(InformationPacket.PacketType.Content, content) {}
-
-		public InformationPacket(PacketType type, object content) {
-			Type = type;
+		public InformationPacket(object content) {
 			Content = content;
+			Attributes = new Dictionary<string, object>();
+		}
+
+		public InformationPacket(object content, Dictionary<string, object> attributes) : this(content) {
+			foreach (var kvp in attributes) {
+				Attributes[kvp.Key] = kvp.Value;
+			}
 		}
 	}
 }

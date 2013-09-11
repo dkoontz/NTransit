@@ -36,6 +36,7 @@ namespace NTransit {
 
 		public bool TrySend(InformationPacket ip) {
 			lock (lockObject) {
+//				Console.WriteLine("received packet '" + ip.Content + "' on port " + Process.Name + "." + Name + " capacity " + queue.Count + " / " + ConnectionCapacity);
 				if (queue.Count < ConnectionCapacity) {
 					queue.Enqueue(ip);
 					return true;
@@ -62,7 +63,11 @@ namespace NTransit {
 
 			if (ipOffer != null && ipOffer.Accepted) {
 				if (!initialIpSent && initialIp != null) initialIpSent = true;
-				else queue.Dequeue();
+				else {
+					lock (lockObject) {
+						queue.Dequeue();
+					}
+				}
 
 				ipOffer = null;
 			}
@@ -78,6 +83,9 @@ namespace NTransit {
 					break;
 				case InformationPacket.PacketType.EndSequence:
 					SequenceEnd(offer);
+					break;
+				case InformationPacket.PacketType.Auto:
+					Receive(offer);
 					break;
 			}
 		}

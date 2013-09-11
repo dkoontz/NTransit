@@ -20,6 +20,8 @@ using System.Reflection;
 // Type checking of IP content at Port/Connection level based on parameter(s) to InputPort / OutputPort attributes
 
 namespace NTransit {
+	[InputPort("AUTO")]
+	[OutputPort("AUTO")]
 	[OutputPort("Errors")]
 	public abstract class Component {
 		// This inner class exists to make the Receive["In"] = data => ... syntax possible
@@ -99,10 +101,11 @@ namespace NTransit {
 
 				var allInputPortsHaveInitialData = true;
 				foreach (var kvp in inPorts) {
+					if (kvp.Key == "AUTO") continue;
 					if (!kvp.Value.HasInitialData) allInputPortsHaveInitialData = false;
 				}
 
-				Console.WriteLine(Name + " is autostart? " + (hasAutoStartAttribute || allInputPortsHaveInitialData));
+//				Console.WriteLine(Name + " is autostart? " + (hasAutoStartAttribute || allInputPortsHaveInitialData));
 				return hasAutoStartAttribute || allInputPortsHaveInitialData;
 
 			}
@@ -115,6 +118,8 @@ namespace NTransit {
 				return false;
 			}
 		}
+
+		public bool HasOutputPacketWaiting { get { return pendingPackets.Count > 0; } }
 
 		protected DataReceivers Receive;
 		protected SequenceStartReceivers SequenceStart;
@@ -160,12 +165,12 @@ namespace NTransit {
 			pendingPackets = new Queue<PendingPacket>();
 		}
 
-		public void ConnectPorts(string outPortName, Component process, string inPortName) {
+		public void ConnectTo(string outPortName, Component process, string inPortName) {
 			ValidateOutputPortName(outPortName);
 			process.AddConnectBetween(outPorts[outPortName], inPortName);
 		}
 
-		public void ConnectPorts(string outPortName, Component process, string inPortName, int capacity) {
+		public void ConnectTo(string outPortName, Component process, string inPortName, int capacity) {
 			ValidateOutputPortName(outPortName);
 			process.AddConnectBetween(outPorts[outPortName], inPortName, capacity);
 		}
@@ -182,11 +187,14 @@ namespace NTransit {
 
 		public void Shutdown() {
 			End();
+
+			if (outPorts["AUTO"].Connected) {
+				Send("AUTO", new InformationPacket(null, InformationPacket.PacketType.Auto));
+			}
+
 		}
 
 		public void Tick() {
-			if (Status == ProcessStatus.Completed) return;
-
 			PendingPacket firstPacket = null;
 			while (pendingPackets.Count > 0 && firstPacket != pendingPackets.Peek()) {
 				var pendingPacket = pendingPackets.Dequeue();
@@ -196,10 +204,13 @@ namespace NTransit {
 				}
 			}
 
-			if (pendingPackets.Count > 0) Status = ProcessStatus.Blocked;
-			else Status = ProcessStatus.Active;
 
-			if (Status == ProcessStatus.Active) {
+//			CompleteIfAllUpstreamComponentsHaveCompleted();
+			if (Status == ProcessStatus.Completed) return;
+
+			if (pendingPackets.Count > 0) Status = ProcessStatus.Blocked;
+			else  {
+				Status = ProcessStatus.Active;
 				foreach (var kvp in inPorts) {
 					kvp.Value.Tick();
 				}
@@ -217,10 +228,16 @@ namespace NTransit {
 		}
 
 		protected void Send(string port, InformationPacket ip) {
+//			Console.WriteLine("Sending ip '" + ip.Content + "' from " + Name + "." + port);
 			ValidateOutputPortName(port);
 			if (!outPorts[port].TrySend(ip)) {
 				pendingPackets.Enqueue(new PendingPacket(port, ip));
 			}
+		}
+
+		protected bool TrySend(string port, InformationPacket ip) {
+			ValidateOutputPortName(port);
+			return outPorts[port].TrySend(ip);
 		}
 
 		protected void SendSequenceStart(string port) {

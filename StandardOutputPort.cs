@@ -5,6 +5,7 @@ namespace NTransit {
 	public class StandardOutputPort {
 		public string Name { get; set; }
 		public bool HasCapacity { get { return connectedPort.HasCapacity; } }
+		public bool Connected { get { return connectedPort != null; } }
 
 		StandardInputPort connectedPort;
 

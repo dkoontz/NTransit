@@ -61,6 +61,8 @@
     <Compile Include="EndpointComponent.cs" />
     <Compile Include="PropagatorComponent.cs" />
     <Compile Include="AutoStartAttribute.cs" />
+    <Compile Include="Components\Gate.cs" />
+    <Compile Include="Components\IpQueue.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

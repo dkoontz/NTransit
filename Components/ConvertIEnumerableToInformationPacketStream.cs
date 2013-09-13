@@ -11,14 +11,19 @@ namespace NTransit {
 			Receive["IEnumerable"] = data => {
 				iterator = data.Accept().ContentAs<IEnumerable>().GetEnumerator();
 				SendSequenceStart("Out");
-				if (!iterator.MoveNext()) Status = ProcessStatus.Terminated;
+				if (!iterator.MoveNext()) {
+					Status = ProcessStatus.Terminated;
+				}
 			};
 			
 			Update = () => {
 				while (HasCapacity("Out") && Status == ProcessStatus.Active) {
 					SendNew("Out", iterator.Current);
-					if (!iterator.MoveNext()) Status = ProcessStatus.Terminated;
+					if (!iterator.MoveNext()) {
+						Status = ProcessStatus.Terminated;
+					}
 				}
+				return false;
 			};
 			
 			End = () => SendSequenceEnd("Out");

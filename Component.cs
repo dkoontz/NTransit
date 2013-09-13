@@ -7,14 +7,12 @@ using System.Reflection;
 // Big TODO's:
 //
 // FBP / Json importer
-// Auto ports
 // Support thread pool and individual threads
 // Sub-Networks
 // Array Inputs
 // Array Outputs
 // Auto wire unconnected output ports to Drop component
 // Auto wire unconnected Errors component port to default ConsoleWriter or settable property
-// Closeable ports that cannot be re-opened due to incoming IPs
 // Figure out IP ownership and tracking/disposing
 // Allowing components to execute during Fixed/Late Update
 // Type checking of IP content at Port/Connection level based on parameter(s) to InputPort / OutputPort attributes
@@ -34,7 +32,9 @@ namespace NTransit {
 
 			public Action<IpOffer> this[string portName] {
 				set {
-					if (!parentComponent.inPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					if (!parentComponent.inPorts.ContainsKey(portName)) {
+						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					}
 					parentComponent.inPorts[portName].Receive = value;
 				}
 			}
@@ -49,7 +49,9 @@ namespace NTransit {
 
 			public Action<IpOffer> this[string portName] {
 				set {
-					if (!parentComponent.inPorts.ContainsKey(portName))	throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					if (!parentComponent.inPorts.ContainsKey(portName)) {
+						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					}
 					parentComponent.inPorts[portName].SequenceStart = value;
 				}
 			}
@@ -64,7 +66,9 @@ namespace NTransit {
 
 			public Action<IpOffer> this[string portName] {
 				set {
-					if (!parentComponent.inPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					if (!parentComponent.inPorts.ContainsKey(portName)) {
+						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					}
 					parentComponent.inPorts[portName].SequenceEnd = value;
 				}
 			}
@@ -89,31 +93,37 @@ namespace NTransit {
 
 		public string Name { get; protected set; }
 		public ProcessStatus Status { get; protected set; }
-		public Action Start = () => {};
-		public Action Update = () => {};
-		public Action End = () => {};
+		public Action Start;
+		public Func<bool> Update;
+		public Action End;
 		public bool AutoStart { 
 			get {
 				var hasAutoStartAttribute = false;
 				foreach (var attribute in GetType().GetCustomAttributes(true)) {
-					if (attribute is AutoStartAttribute) hasAutoStartAttribute = true;
+					if (attribute is AutoStartAttribute) {
+						hasAutoStartAttribute = true;
+					}
 				}
 
 				var allInputPortsHaveInitialData = true;
 				foreach (var kvp in inPorts) {
-					if (kvp.Key == "AUTO") continue;
-					if (!kvp.Value.HasInitialData) allInputPortsHaveInitialData = false;
+					if (kvp.Key == "AUTO") {
+						continue;
+					}
+					if (!kvp.Value.HasInitialData) {
+						allInputPortsHaveInitialData = false;
+					}
 				}
 
-//				Console.WriteLine(Name + " is autostart? " + (hasAutoStartAttribute || allInputPortsHaveInitialData));
 				return hasAutoStartAttribute || allInputPortsHaveInitialData;
-
 			}
 		}
 		public bool HasInputPacketWaiting {
 			get {
 				foreach (var kvp in inPorts) {
-					if (kvp.Value.QueuedPacketCount > 0) return true;
+					if (kvp.Value.HasPacketWaiting) {
+						return true;
+					}
 				}
 				return false;
 			}
@@ -183,12 +193,15 @@ namespace NTransit {
 
 		public void Startup() {
 			Status = ProcessStatus.Active;
-			Start();
+			if (Start != null) {
+				Start();
+			}
 		}
 
 		public void Shutdown() {
-//			Console.WriteLine("Process: " + Name + " shutting down");
-			End();
+			if (End != null) {
+				End();
+			}
 
 			if (outPorts["AUTO"].Connected) {
 				Send("AUTO", new InformationPacket(null, InformationPacket.PacketType.Auto));
@@ -204,33 +217,45 @@ namespace NTransit {
 
 		}
 
-		public void Tick() {
+		public bool Tick() {
 			PendingPacket firstPacket = null;
 			while (pendingPackets.Count > 0 && firstPacket != pendingPackets.Peek()) {
 				var pendingPacket = pendingPackets.Dequeue();
 				if (!outPorts[pendingPacket.Port].ConnectedPortClosed && !outPorts[pendingPacket.Port].TrySend(pendingPacket.Ip, true)) {
-					if (null == firstPacket) firstPacket = pendingPacket;
+					if (firstPacket == null) {
+						firstPacket = pendingPacket;
+					}
 					pendingPackets.Enqueue(pendingPacket);
 				}
 			}
 
-			if (Status == ProcessStatus.Terminated) return;
-
-			if (pendingPackets.Count > 0) Status = ProcessStatus.Blocked;
-			else  {
-				Status = ProcessStatus.Active;
-				foreach (var kvp in inPorts) {
-					kvp.Value.Tick();
-				}
-				
-				Update();
-			}
-
-			var upstream = AllUpstreamPortsAreClosed();
-			var downstream = AllDownstreamPortsAreClosed();
-
 			if ((!DoNotTerminateWhenInputPortsAreClosed && AllUpstreamPortsAreClosed()) || AllDownstreamPortsAreClosed()) {
 				Status = ProcessStatus.Terminated;
+			}
+
+			if (Status == ProcessStatus.Terminated) {
+				return false;
+			}
+
+			if (pendingPackets.Count > 0) {
+				Status = ProcessStatus.Blocked;
+				return false;
+			}
+			else {
+				var sentPacket = false;
+				if (HasInputPacketWaiting) {
+					Status = ProcessStatus.Active;
+					foreach (var kvp in inPorts) {
+						sentPacket = kvp.Value.Tick() || sentPacket;
+					}
+				}
+
+				if (Update != null) {
+					return Update() || sentPacket;
+				}
+				else {
+					return sentPacket;
+				}
 			}
 		}
 
@@ -243,7 +268,6 @@ namespace NTransit {
 		}
 
 		protected void Send(string port, InformationPacket ip) {
-//			Console.WriteLine("Sending ip '" + ip.Content + "' from " + Name + "." + port);
 			ValidateOutputPortName(port);
 			if (!outPorts[port].TrySend(ip)) {
 				pendingPackets.Enqueue(new PendingPacket(port, ip));
@@ -267,6 +291,9 @@ namespace NTransit {
 			Send(port, new InformationPacket(sequenceIds[port].Pop(), InformationPacket.PacketType.EndSequence));
 		}
 
+		protected bool OutportIsConnected(string port) {
+			return outPorts[port].Connected;
+		}
 
 		protected bool HasCapacity(string port) {
 			return outPorts[port].HasCapacity;
@@ -282,7 +309,7 @@ namespace NTransit {
 				}
 				else if (attribute is OutputPortAttribute) {
 					var outPort = attribute as OutputPortAttribute;
-					SetOutputPort(outPort.Name, new StandardOutputPort());
+					SetOutputPort(outPort.Name, new StandardOutputPort(this));
 				}
 			}
 		}
@@ -301,8 +328,6 @@ namespace NTransit {
 			else {
 				var allClosed = true;
 				foreach (var port in inPorts.Values) {
-//					Console.WriteLine("checking port '" + Name + "." + port.Name + "' - connected: " + port.Connected + ", all upstream closed: " + port.AllUpstreamPortsClosed);
-
 					if (port.Connected && !port.AllUpstreamPortsClosed) {
 						allClosed = false;
 					}

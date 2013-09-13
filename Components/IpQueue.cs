@@ -7,17 +7,28 @@ namespace NTransit {
 
 		public IpQueue(string name) : base(name) {
 			DoNotTerminateWhenInputPortsAreClosed = true;
-
-			Receive["In"] = data => queue.Enqueue(data.Accept());
+			SequenceStart["In"] = Enqueue;
+			SequenceEnd["In"] = Enqueue;
+			Receive["In"] = Enqueue;
 			Update = () => {
 				if (queue.Count > 0 && TrySend("Out", queue.Peek())) {
 					queue.Dequeue();
+					return true;
 				}
 
-				if (queue.Count == 0 && AllUpstreamPortsAreClosed()) {
-					Status = ProcessStatus.Terminated;
+				if (queue.Count == 0) {
+					if (AllUpstreamPortsAreClosed()) {
+						Status = ProcessStatus.Terminated;
+					}
 				}
+
+				return false;
 			};
+		}
+
+		void Enqueue(IpOffer offer) {
+			var ip = offer.Accept();
+			queue.Enqueue(ip);
 		}
 	}
 }

@@ -20,6 +20,7 @@ namespace NTransit {
 				return allClosed;
 			}
 		}
+		public bool HasPacketWaiting { get { return queue.Count > 0 || (HasInitialData && !initialIpSent); } }
 		public bool HasCapacity { get { return queue.Count < ConnectionCapacity; } }
 		public bool HasInitialData { get { return initialIp != null; } }
 		public int QueuedPacketCount { get { return queue.Count; } }
@@ -54,7 +55,6 @@ namespace NTransit {
 				throw new InvalidOperationException(string.Format("Cannot send data to a closed port '{0}.{1}'", Process.Name, Name));
 			}
 			lock (lockObject) {
-//				Console.WriteLine("received packet '" + ip.Content + "' on port " + Process.Name + "." + Name + " capacity " + queue.Count + " / " + ConnectionCapacity);
 				if (queue.Count < ConnectionCapacity) {
 					queue.Enqueue(ip);
 					return true;
@@ -64,8 +64,10 @@ namespace NTransit {
 			}
 		}
 
-		public void Tick() {
-			if (null == Receive || Closed) return;
+		public bool Tick() {
+			if (Receive == null || Closed) {
+				return false;
+			}
 
 			if (ipOffer != null) {
 				DispatchOffer(ipOffer);
@@ -90,7 +92,10 @@ namespace NTransit {
 				}
 
 				ipOffer = null;
+				return true;
 			}
+
+			return false;
 		}
 
 		public void NotifyOfConnection(StandardOutputPort port) {
@@ -98,7 +103,6 @@ namespace NTransit {
 		}
 
 		public void Close() {
-//			Console.WriteLine("Closing input port '{0}.{1}'", Process.Name, Name);
 			Closed = true;
 		}
 

@@ -13,6 +13,7 @@ namespace NTransit {
 					SendNew("Out", reader.ReadLine()); 
 					if (reader.EndOfStream) Status = ProcessStatus.Terminated;
 				}
+				return false;
 			};
 			End = () => reader.Close();
 		}

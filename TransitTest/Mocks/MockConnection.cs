@@ -11,7 +11,7 @@ namespace NTransitTest {
 		}
 
 		public bool Empty {
-			get { return 0 == Packets.Count; }
+			get { return Packets.Count == 0; }
 		}
 
 		public int NumberOfPacketsHeld {

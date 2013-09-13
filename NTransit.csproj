@@ -57,9 +57,13 @@
     <Compile Include="AutoStartAttribute.cs" />
     <Compile Include="Components\Gate.cs" />
     <Compile Include="Components\IpQueue.cs" />
+    <Compile Include="Schedulers\SingleThreadedScheduler.cs" />
+    <Compile Include="Components\DropIp.cs" />
+    <Compile Include="Components\Checkpoint.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Folder Include="Components\" />
+    <Folder Include="Schedulers\" />
   </ItemGroup>
 </Project>

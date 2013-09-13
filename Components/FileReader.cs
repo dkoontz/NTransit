@@ -11,7 +11,7 @@ namespace NTransit {
 			Update = () => {
 				while (HasCapacity("Out") && !reader.EndOfStream) {
 					SendNew("Out", reader.ReadLine()); 
-					if (reader.EndOfStream) Status = ProcessStatus.Completed;
+					if (reader.EndOfStream) Status = ProcessStatus.Terminated;
 				}
 			};
 			End = () => reader.Close();

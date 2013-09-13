@@ -37,12 +37,6 @@
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\Applications\Unity\Unity.app\Contents\Frameworks\Managed\UnityEngine.dll</HintPath>
     </Reference>
-    <Reference Include="System.Threading">
-      <HintPath>lib\System.Threading.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Dataflow">
-      <HintPath>lib\System.Threading.Tasks.Dataflow.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />

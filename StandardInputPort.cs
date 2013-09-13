@@ -8,9 +8,22 @@ namespace NTransit {
 		public Component Process { get; set; }
 		public bool Greedy { get; set; }
 		public int ConnectionCapacity { get; set; }
+		public bool Connected { get { return upstreamPorts.Count > 0; } }
+		public bool AllUpstreamPortsClosed {
+			get {
+				var allClosed = upstreamPorts.Count > 0;
+				foreach (var port in upstreamPorts) {
+					if (port.Connected && !port.Closed) {
+						allClosed = false;
+					}
+				}
+				return allClosed;
+			}
+		}
 		public bool HasCapacity { get { return queue.Count < ConnectionCapacity; } }
 		public bool HasInitialData { get { return initialIp != null; } }
 		public int QueuedPacketCount { get { return queue.Count; } }
+		public bool Closed { get; private set; }
 
 		public Action<IpOffer> Receive;
 		public Action<IpOffer> SequenceStart;
@@ -21,10 +34,12 @@ namespace NTransit {
 		IpOffer ipOffer;
 		InformationPacket initialIp;
 		bool initialIpSent;
+		List<StandardOutputPort> upstreamPorts;
 
 		public StandardInputPort(int connectionCapacity, Component process) {
 			this.ConnectionCapacity = connectionCapacity;
 			queue = new Queue<InformationPacket>(connectionCapacity);
+			upstreamPorts = new List<StandardOutputPort>();
 			Process = process;
 			SequenceStart = data => data.Accept();
 			SequenceEnd = data => data.Accept();
@@ -35,6 +50,9 @@ namespace NTransit {
 		}
 
 		public bool TrySend(InformationPacket ip) {
+			if (Closed)	{
+				throw new InvalidOperationException(string.Format("Cannot send data to a closed port '{0}.{1}'", Process.Name, Name));
+			}
 			lock (lockObject) {
 //				Console.WriteLine("received packet '" + ip.Content + "' on port " + Process.Name + "." + Name + " capacity " + queue.Count + " / " + ConnectionCapacity);
 				if (queue.Count < ConnectionCapacity) {
@@ -47,7 +65,7 @@ namespace NTransit {
 		}
 
 		public void Tick() {
-			if (null == Receive) return;
+			if (null == Receive || Closed) return;
 
 			if (ipOffer != null) {
 				DispatchOffer(ipOffer);
@@ -62,7 +80,9 @@ namespace NTransit {
 			}
 
 			if (ipOffer != null && ipOffer.Accepted) {
-				if (!initialIpSent && initialIp != null) initialIpSent = true;
+				if (!initialIpSent && initialIp != null) {
+					initialIpSent = true;
+				}
 				else {
 					lock (lockObject) {
 						queue.Dequeue();
@@ -71,6 +91,15 @@ namespace NTransit {
 
 				ipOffer = null;
 			}
+		}
+
+		public void NotifyOfConnection(StandardOutputPort port) {
+			upstreamPorts.Add(port);
+		}
+
+		public void Close() {
+//			Console.WriteLine("Closing input port '{0}.{1}'", Process.Name, Name);
+			Closed = true;
 		}
 
 		void DispatchOffer(IpOffer offer) {

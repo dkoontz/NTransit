@@ -39,16 +39,18 @@ namespace NTransitExamples {
 			scheduler.AddProcess(reverser);
 			scheduler.AddProcess(writer);
 
-			for (var i = 0; i < 30; ++i) scheduler.Tick();
+			while (scheduler.Tick()) {
+
+			}
 		}
 	}
 
 	public class BasicScheduler {
 		List<Component> registeredProcesses = new List<Component>();
 		LinkedList<Component> runningProcesses = new LinkedList<Component>();
-		Queue<Component> completingProcesses = new Queue<Component>();
-		LinkedList<Component> completedProcesses = new LinkedList<Component>();
-		Queue<Component> terminatedProcesses = new Queue<Component>();
+		Queue<Component> processesToMoveFromRunningToTerminating = new Queue<Component>();
+		LinkedList<Component> terminatingProcesses = new LinkedList<Component>();
+		Queue<Component> processesThatHaveFullyTerminated = new Queue<Component>();
 
 		public void AddProcess(Component process) {
 			registeredProcesses.Add(process);
@@ -62,7 +64,7 @@ namespace NTransitExamples {
 				}
 			}
 
-			Console.WriteLine("Tick-----------");
+//			Console.WriteLine("Tick-----------");
 			foreach (var process in registeredProcesses) {
 				if (process.Status == Component.ProcessStatus.Unstarted &&
 				    process.HasInputPacketWaiting) {
@@ -72,36 +74,37 @@ namespace NTransitExamples {
 				} 
 			}
 
-			foreach (var process in completedProcesses) {
+			foreach (var process in terminatingProcesses) {
 				if (process.HasOutputPacketWaiting) {
 					process.Tick();
 				}
 				else {
-					terminatedProcesses.Enqueue(process);
+//					Console.WriteLine("Process " + process.Name + " has sent all packets, terminating");
+					processesThatHaveFullyTerminated.Enqueue(process);
 				}
 			}
 
 			foreach (var process in runningProcesses) {
 				process.Tick();
-				if (process.Status == Component.ProcessStatus.Completed) {
-					completingProcesses.Enqueue(process);
+				if (process.Status == Component.ProcessStatus.Terminated) {
+//					Console.WriteLine("Shutting down process: " + process.Name + ", waiting to finish sending packets");
+					processesToMoveFromRunningToTerminating.Enqueue(process);
 				}
 			}
 
-			while (completingProcesses.Count > 0) {
-				var process = completingProcesses.Dequeue();
+			while (processesToMoveFromRunningToTerminating.Count > 0) {
+				var process = processesToMoveFromRunningToTerminating.Dequeue();
 				runningProcesses.Remove(process);
-				completedProcesses.AddLast(process);
+				terminatingProcesses.AddLast(process);
 //					Console.WriteLine("process " + process.Name + " completed, shutting down");
 				process.Shutdown();
 			}
 
-			while (terminatedProcesses.Count > 0) {
-				var process = terminatedProcesses.Dequeue();
-				completedProcesses.Remove(process);
+			while (processesThatHaveFullyTerminated.Count > 0) {
+				terminatingProcesses.Remove(processesThatHaveFullyTerminated.Dequeue());
 			}
 
-			return runningProcesses.Count > 0 || completedProcesses.Count > 0;
+			return runningProcesses.Count > 0 || terminatingProcesses.Count > 0;
 		}
 	}
 }

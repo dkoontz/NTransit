@@ -186,6 +186,10 @@ namespace NTransit {
 			process.AddConnectBetween(outPorts[outPortName], inPortName, capacity);
 		}
 
+		public void SetInitialData(string portName, object value) {
+			SetInitialData(portName, new InformationPacket(value));
+		}
+
 		public void SetInitialData(string portName, InformationPacket ip) {
 			ValidateInputPortName(portName);
 			inPorts[portName].SetInitialData(ip);

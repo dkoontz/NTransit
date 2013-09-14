@@ -60,6 +60,7 @@
     <Compile Include="Schedulers\SingleThreadedScheduler.cs" />
     <Compile Include="Components\DropIp.cs" />
     <Compile Include="Components\Checkpoint.cs" />
+    <Compile Include="FbpParser.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

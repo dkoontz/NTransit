@@ -4,134 +4,382 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+// Big TODO's:
+//
+// FBP / Json importer
+// Support thread pool and individual threads
+// Sub-Networks
+// Array Inputs
+// Array Outputs
+// Auto wire unconnected output ports to Drop component
+// Auto wire unconnected Errors component port to default ConsoleWriter or settable property
+// Figure out IP ownership and tracking/disposing
+// Allowing components to execute during Fixed/Late Update
+// Type checking of IP content at Port/Connection level based on parameter(s) to InputPort / OutputPort attributes
+
 namespace NTransit {
-	public class WaitForPacketOn {
-		public IInputPort[] Ports { get; private set; }
-
-		public WaitForPacketOn(IInputPort[] ports) {
-			Ports = ports;
-		}
-	}
-
-	public class WaitForCapacityOn {
-		public IOutputPort[] Ports { get; private set; }
-
-		public WaitForCapacityOn(IOutputPort[] ports) {
-			Ports = ports;
-		}
-	}
-
-	public class WaitForTime {
-		public long Milliseconds { get; private set; }
-
-		public long ElapsedTime { get; set; }
-
-		public WaitForTime(int milliseconds) {
-			Milliseconds = milliseconds;
-		}
-	}
-
-	public class WaitForPacketOrCapacityOnAny {
-		public IInputPort[] InputPorts { get; private set; }
-		public IOutputPort[] OutputPorts { get; private set; }
-
-		public WaitForPacketOrCapacityOnAny(IInputPort[] inPorts, IOutputPort[] outPorts) {
-			InputPorts = inPorts;
-			OutputPorts = outPorts;
-		}
-	}
-
+	[InputPort("AUTO")]
+	[OutputPort("AUTO")]
+	[OutputPort("Errors")]
 	public abstract class Component {
+		// This inner class exists to make the Receive["In"] = data => ... syntax possible
+		protected class DataReceivers {
+			Component parentComponent;
+
+			public DataReceivers(Component parent) {
+				parentComponent = parent;
+			}
+
+			public Action<IpOffer> this[string portName] {
+				set {
+					if (!parentComponent.inPorts.ContainsKey(portName)) {
+						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					}
+					parentComponent.inPorts[portName].Receive = value;
+				}
+			}
+		}
+
+		protected class SequenceStartReceivers {
+			Component parentComponent;
+
+			public SequenceStartReceivers(Component parent) {
+				parentComponent = parent;
+			}
+
+			public Action<IpOffer> this[string portName] {
+				set {
+					if (!parentComponent.inPorts.ContainsKey(portName)) {
+						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					}
+					parentComponent.inPorts[portName].SequenceStart = value;
+				}
+			}
+		}
+
+		protected class SequenceEndReceivers {
+			Component parentComponent;
+
+			public SequenceEndReceivers(Component parent) {
+				parentComponent = parent;
+			}
+
+			public Action<IpOffer> this[string portName] {
+				set {
+					if (!parentComponent.inPorts.ContainsKey(portName)) {
+						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+					}
+					parentComponent.inPorts[portName].SequenceEnd = value;
+				}
+			}
+		}
+
+		class PendingPacket {
+			public string Port;
+			public InformationPacket Ip;
+
+			public PendingPacket(string port, InformationPacket ip) {
+				Port = port;
+				Ip = ip;
+			}
+		}
+
+		public enum ProcessStatus {
+			Unstarted,
+			Active,
+			Blocked,
+			Terminated,
+		}
+
 		public string Name { get; protected set; }
+		public ProcessStatus Status { get; protected set; }
+		public Action Start;
+		public Func<bool> Update;
+		public Action End;
+		public bool AutoStart { 
+			get {
+				var hasAutoStartAttribute = false;
+				foreach (var attribute in GetType().GetCustomAttributes(true)) {
+					if (attribute is AutoStartAttribute) {
+						hasAutoStartAttribute = true;
+					}
+				}
 
-		[InputPort("AUTO_IN")]
-		public StandardInputPort AutoInPort { get; set; }
+				var allInputPortsHaveInitialData = true;
+				foreach (var kvp in inPorts) {
+					if (kvp.Key == "AUTO") {
+						continue;
+					}
+					if (!kvp.Value.HasInitialData) {
+						allInputPortsHaveInitialData = false;
+					}
+				}
 
-		[OutputPort("AUTO_OUT")]
-		public StandardOutputPort AutoOutPort { get; set; }
+				return hasAutoStartAttribute || allInputPortsHaveInitialData;
+			}
+		}
+		public bool HasInputPacketWaiting {
+			get {
+				foreach (var kvp in inPorts) {
+					if (kvp.Value.HasPacketWaiting) {
+						return true;
+					}
+				}
+				return false;
+			}
+		}
 
-		[OutputPort("Errors")]
-		public StandardOutputPort ErrorsPort { get; set; }
+		public bool HasOutputPacketWaiting { get { return pendingPackets.Count > 0; } }
 
-		// This is set automatically during port creation by the scheduler
-		public IInputPort[] InputPorts { protected get ; set; }
-		public IOutputPort[] OutputPorts { protected get ; set; }
-		public IInputPort[] ConnectedInputPorts { protected get ; set; }
-		public IOutputPort[] ConnectedOutputPorts { protected get ; set; }
+		protected bool DoNotTerminateWhenInputPortsAreClosed { get; set; }
+		protected DataReceivers Receive;
+		protected SequenceStartReceivers SequenceStart;
+		protected SequenceEndReceivers SequenceEnd;
 
-		protected Component(string name) {
+		Dictionary<string, StandardInputPort> inPorts;
+		Dictionary<string, StandardOutputPort> outPorts;
+		Queue<PendingPacket> pendingPackets;
+		Dictionary<string, Stack<string>> sequenceIds;
+
+		protected Component(string name) : this(name, true) {}
+
+		protected Component(string name, bool autoCreatePorts) {
 			Name = name;
-			ownedIps = new LinkedList<InformationPacket>();
-		}
 
-		LinkedList<InformationPacket> ownedIps;
+			pendingPackets = new Queue<PendingPacket>();
+			sequenceIds = new Dictionary<string, Stack<string>>();
+			Receive = new DataReceivers(this);
+			SequenceStart = new SequenceStartReceivers(this);
+			SequenceEnd = new SequenceEndReceivers(this);
+			Status = ProcessStatus.Unstarted;
 
-		public abstract IEnumerator Execute();
-
-		public void ClaimIp(InformationPacket ip) {
-			ip.Owner = this;
-			ownedIps.AddLast(ip);
-		}
-
-		public void ReleaseIp(InformationPacket ip) {
-			ip.Owner = null;
-			ownedIps.Remove(ip);
-		}
-
-		public bool HasPacketOnAnyNonIipInputPort() {
-			foreach (var port in InputPorts) {
-				if (port.HasConnection && !port.Connection.HasInitialInformationPacket && !port.Connection.Empty) {
-					return true;
-				}
-			}
-
-			return false;
-		}
-
-		// This method is called when the Network is told to shutdown
-		// Override this method to add your own cleanup logic
-		public virtual void Close() {}
-
-		public void SetInputPort(string attributeName, IInputPort port) {
-			var propertyToAssignTo = GetType().GetProperties().FirstOrDefault(property => {
-				return HasAttributeNamed<InputPortAttribute>(property, attributeName);
-			});
-
-			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the InputPort attribute", GetType(), attributeName));
-			propertyToAssignTo.SetValue(this, port, null);
-		}
-
-		public void SetOutputPort(string attributeName, IOutputPort port) {
-			var propertyToAssignTo = GetType().GetProperties().FirstOrDefault(property => {
-				return HasAttributeNamed<OutputPortAttribute>(property, attributeName);
-			});
-
-			if (null == propertyToAssignTo)	throw new InvalidOperationException(string.Format("Component '{0}' does not contain a property named '{1}' with the OutputPort attribute", GetType(), attributeName));
-			propertyToAssignTo.SetValue(this, port, null);
-		}
-
-		public void ResetInitialDataAvailability() {
-			foreach(var p in InputPorts) {
-				if (p.HasConnection && p.Connection.HasInitialInformationPacket) {
-					p.Connection.ResetInitialDataAvailability();
-				}
+			if (autoCreatePorts) {
+				inPorts = new Dictionary<string, StandardInputPort>();
+				outPorts = new Dictionary<string, StandardOutputPort>();
+				CreatePorts();
 			}
 		}
 
-		protected WaitForPacketOn WaitForPacketOn(params IInputPort[] ports) {
-			return new WaitForPacketOn(ports);
+		protected Component(string name, Dictionary<string, StandardInputPort> inputPorts, Dictionary<string, StandardOutputPort> outputPorts) : this(name, false) {
+			inPorts = inputPorts;
+			outPorts = outputPorts;
 		}
 
-		protected WaitForCapacityOn WaitForCapacityOn(params IOutputPort[] ports) {
-			return new WaitForCapacityOn(ports);
+		public void SetInputPort(string name, StandardInputPort port) {
+			port.Name = name;
+			inPorts[name] = port;
 		}
 
-		protected WaitForTime WaitForTime(int timeToWait) {
-			return new WaitForTime(timeToWait);
+		public void SetOutputPort(string name, StandardOutputPort port) {
+			port.Name = name;
+			outPorts[name] = port;
+			pendingPackets = new Queue<PendingPacket>();
 		}
 
-		bool HasAttributeNamed<T>(PropertyInfo property, string name) where T : PortAttribute {
-			return null != property.GetCustomAttributes(true).FirstOrDefault(attr => attr is T && (attr as T).Name == name);
+		public void ConnectTo(string outPortName, Component process, string inPortName) {
+			ValidateOutputPortName(outPortName);
+			process.AddConnectBetween(outPorts[outPortName], inPortName);
+		}
+
+		public void ConnectTo(string outPortName, Component process, string inPortName, int capacity) {
+			ValidateOutputPortName(outPortName);
+			process.AddConnectBetween(outPorts[outPortName], inPortName, capacity);
+		}
+
+		public void SetInitialData(string portName, object value) {
+			SetInitialData(portName, new InformationPacket(value));
+		}
+
+		public void SetInitialData(string portName, InformationPacket ip) {
+			ValidateInputPortName(portName);
+			inPorts[portName].SetInitialData(ip);
+		}
+
+		public void Startup() {
+			Status = ProcessStatus.Active;
+			if (Start != null) {
+				Start();
+			}
+		}
+
+		public void Shutdown() {
+			if (End != null) {
+				End();
+			}
+
+			if (outPorts["AUTO"].Connected) {
+				Send("AUTO", new InformationPacket(null, InformationPacket.PacketType.Auto));
+			}
+
+			foreach (var port in inPorts.Values) {
+				port.Close();
+			}
+
+			foreach (var port in outPorts.Values) {
+				port.Close();
+			}
+
+		}
+
+		public bool Tick() {
+			PendingPacket firstPacket = null;
+			while (pendingPackets.Count > 0 && firstPacket != pendingPackets.Peek()) {
+				var pendingPacket = pendingPackets.Dequeue();
+				if (!outPorts[pendingPacket.Port].ConnectedPortClosed && !outPorts[pendingPacket.Port].TrySend(pendingPacket.Ip, true)) {
+					if (firstPacket == null) {
+						firstPacket = pendingPacket;
+					}
+					pendingPackets.Enqueue(pendingPacket);
+				}
+			}
+
+			if ((!DoNotTerminateWhenInputPortsAreClosed && AllUpstreamPortsAreClosed()) || AllDownstreamPortsAreClosed()) {
+				Status = ProcessStatus.Terminated;
+			}
+
+			if (Status == ProcessStatus.Terminated) {
+				return false;
+			}
+
+			if (pendingPackets.Count > 0) {
+				Status = ProcessStatus.Blocked;
+				return false;
+			}
+			else {
+				var sentPacket = false;
+				if (HasInputPacketWaiting) {
+					Status = ProcessStatus.Active;
+					foreach (var kvp in inPorts) {
+						sentPacket = kvp.Value.Tick() || sentPacket;
+					}
+				}
+
+				if (Update != null) {
+					return Update() || sentPacket;
+				}
+				else {
+					return sentPacket;
+				}
+			}
+		}
+
+		protected void SendNew(string port, object o) {
+			Send(port, new InformationPacket(o));
+		}
+
+		protected void SendNew(string port, object o, Dictionary<string, object> attributes) {
+			Send(port, new InformationPacket(o, attributes));
+		}
+
+		protected void Send(string port, InformationPacket ip) {
+			ValidateOutputPortName(port);
+			if (!outPorts[port].TrySend(ip)) {
+				pendingPackets.Enqueue(new PendingPacket(port, ip));
+			}
+		}
+
+		protected bool TrySend(string port, InformationPacket ip) {
+			ValidateOutputPortName(port);
+			return outPorts[port].TrySend(ip);
+		}
+
+		protected void SendSequenceStart(string port) {
+			var id = Guid.NewGuid().ToString();
+			if (!sequenceIds.ContainsKey(port))	sequenceIds[port] = new Stack<string>();
+			sequenceIds[port].Push(id);
+			Send(port, new InformationPacket(id, InformationPacket.PacketType.StartSequence));
+		}
+
+		protected void SendSequenceEnd(string port) {
+			if (sequenceIds[port].Count == 0) throw new InvalidOperationException(string.Format("No sequences are active for '{0}.{1}'", Name, port));
+			Send(port, new InformationPacket(sequenceIds[port].Pop(), InformationPacket.PacketType.EndSequence));
+		}
+
+		protected bool OutportIsConnected(string port) {
+			return outPorts[port].Connected;
+		}
+
+		protected bool HasCapacity(string port) {
+			return outPorts[port].HasCapacity;
+		}
+
+		protected void CreatePorts() {
+			// TODO: enable the specification of custom port types in the attribute 
+			// and instantiate that instead of just StandardInputPort / StandardOutputPort
+			foreach (var attribute in GetType().GetCustomAttributes(true)) {
+				if (attribute is InputPortAttribute) {
+					var inPort = attribute as InputPortAttribute;
+					SetInputPort(inPort.Name, new StandardInputPort(1, this));
+				}
+				else if (attribute is OutputPortAttribute) {
+					var outPort = attribute as OutputPortAttribute;
+					SetOutputPort(outPort.Name, new StandardOutputPort(this));
+				}
+			}
+		}
+
+		protected bool AllUpstreamPortsAreClosed() {
+			var anyConnected = false;
+
+			foreach (var port in inPorts.Values) {
+				if (port.Connected) {
+					anyConnected = true;
+				}
+			}
+			if (!anyConnected) {
+				return false;
+			}
+			else {
+				var allClosed = true;
+				foreach (var port in inPorts.Values) {
+					if (port.Connected && !port.AllUpstreamPortsClosed) {
+						allClosed = false;
+					}
+				}
+				return allClosed;
+			}
+		}
+
+		protected bool AllDownstreamPortsAreClosed() {
+			var anyConnected = false;
+
+			foreach (var port in outPorts.Values) {
+				if (port.Connected) {
+					anyConnected = true;
+				}
+			}
+			if (!anyConnected) {
+				return false;
+			}
+			else {
+				var allClosed = outPorts.Count > 0;
+				foreach (var port in outPorts.Values) {
+					if (port.Connected && !port.ConnectedPortClosed) {
+						allClosed = false;
+					}
+				}
+				return allClosed;
+			}
+		}
+
+		protected void ValidateInputPortName(string portName) {
+			if (!inPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no out port named '{0}.{1}'", Name, portName));
+		}
+
+		protected void ValidateOutputPortName(string portName) {
+			if (!outPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no out port named '{0}.{1}'", Name, portName));
+		}
+
+		void AddConnectBetween(StandardOutputPort outPort, string inputPortName) {
+			ValidateInputPortName(inputPortName);
+			var inPort = inPorts[inputPortName];
+			outPort.ConnectTo(inPort);
+			inPort.NotifyOfConnection(outPort);
+		}
+
+		void AddConnectBetween(StandardOutputPort port, string inputPortName, int capacity) {
+			AddConnectBetween(port, inputPortName);
+			inPorts[inputPortName].ConnectionCapacity = capacity;
 		}
 	}
 }

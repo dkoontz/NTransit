@@ -27,6 +27,6 @@ Global
 		{BF405721-20FF-4699-B2CF-B300C5A4CEDB}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = NTransit.csproj
+		StartupItem = nTransitExamples\NTransitExamples.csproj
 	EndGlobalSection
 EndGlobal

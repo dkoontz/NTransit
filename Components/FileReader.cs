@@ -1,32 +1,31 @@
 using System;
-using System.Collections;
 using System.IO;
 
 namespace NTransit {
-	public class FileReader : Component {
-		[InputPort("File Name")]
-		public StandardInputPort FileNamePort { get; set; }
+	[InputPort("FileName")]
+	public class FileReader : SourceComponent {
+		StreamReader reader;
 
-		[OutputPort("File Contents")]
-		public StandardOutputPort FileContentsPort { get; set; }
+		public FileReader(string name) : base(name) {
+			Receive["FileName"] = data => {
+				var fileName = data.Accept().ContentAs<string>();
+				try {
+					reader = new StreamReader(fileName);
+				}
+				catch (FileNotFoundException) {
+					throw new ArgumentException(string.Format("File name '{0}' sent to {1}.FileName does not exist", fileName, Name));
+				}
+			};
 
-		public FileReader(string name) : base(name) {}
+			Update = () => {
+				while (HasCapacity("Out") && !reader.EndOfStream) {
+					SendNew("Out", reader.ReadLine()); 
+					if (reader.EndOfStream) Status = ProcessStatus.Terminated;
+				}
+				return false;
+			};
 
-		public override IEnumerator Execute() {
-			yield return WaitForPacketOn(FileNamePort);
-			var fileName = FileNamePort.Receive().Content as string;
-
-			string contents;
-			try {
-				var reader = new StreamReader(fileName);
-				contents = reader.ReadToEnd();
-			}
-			catch (Exception ex) {
-				ErrorsPort.TrySend(ex);
-				yield break;
-			}
-
-			while (!FileContentsPort.TrySend(contents)) yield return WaitForCapacityOn(FileContentsPort);
+			End = () => reader.Close();
 		}
 	}
 }

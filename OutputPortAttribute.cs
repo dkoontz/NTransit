@@ -1,9 +1,8 @@
 using System;
 
 namespace NTransit {
-	[AttributeUsage(AttributeTargets.Property)]
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 	public class OutputPortAttribute : PortAttribute {
-
 		public OutputPortAttribute(string name) : base(name) {}
 	}
 }

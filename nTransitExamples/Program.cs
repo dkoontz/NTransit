@@ -1,41 +1,55 @@
 using System;
 using NTransit;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
+using System.Collections.Generic;
 
 namespace NTransitExamples {
 	class MainClass {
+		static SingleThreadedScheduler scheduler;
+
 		public static void Main() {
-			var scheduler = new Scheduler();
+//			var converter = new ConvertIEnumerableToInformationPacketStream("Convert IEnumerable");
+//			converter.SetInitialData("IEnumerable", new InformationPacket(new []
+//			{
+//				"The",
+//				"quick",
+//				"brown",
+//				"fox"
+//			}));
+//			var queue = new IpQueue("Queue");
+//			var gate = new Gate("Gate");
+//			var reverser = new TextReverser("Text reverser");
+//
+//			var writer = new ConsoleWriter("Log");
+//
+//			converter.ConnectTo("Out", queue, "In");
+//			queue.ConnectTo("Out", gate, "In");
+//			gate.ConnectTo("Out", reverser, "In");
+//			reverser.ConnectTo("Out", writer, "In");
+//			converter.ConnectTo("AUTO", gate, "Open");
+//
+//			scheduler = new SingleThreadedScheduler();
+//			scheduler.AddProcess(converter);
+//			scheduler.AddProcess(queue);
+//			scheduler.AddProcess(gate);
+//			scheduler.AddProcess(reverser);
+//			scheduler.AddProcess(writer);
 
-			var consoleWriter = new ConsoleWriter("Console Output");
-			scheduler.AddProcess(consoleWriter);
 
-			// File read and write example
+			var program = @"
+				GetWordList(FileReader).Out => Queue(IpQueue).In
+				Queue.Out => WaitUntilAllWordsAreReceived(Gate).In
+				WaitUntilAllWordsAreReceived.Out => ReverseLines(TextReverser).In
+				ReverseLines.Out => Writer(ConsoleWriter).In
+				GetWordList.AUTO => WaitUntilAllWordsAreReceived.Open
+				'test.txt' => GetWordList.FileName
+			";
+			scheduler = new FbpParser().Parse(program);
 
-			//			var reader = new FileReader ("Get File Contents");
-			//			scheduler.AddComponent (reader);
-			//
-			//			var writer = new FileWriter ("Write File Contents");
-			//			scheduler.AddComponent (writer);
-			//
-			//			scheduler.Connect (reader, "File Contents", writer, "Text To Write");
-			//			scheduler.Connect (reader, "Errors", consoleWriter, "In");
-			//			scheduler.Connect (writer, "Errors", consoleWriter, "In");
-			//			scheduler.SetInitialData (reader, "File Name", "test1.txt");
-			//			scheduler.SetInitialData (writer, "File Name", "test2.txt");
+			while (scheduler.Tick()) {
 
-
-			// Random number generator with delay example
-			var rng = new RandomNumberGenerator("Number generator");
-			scheduler.AddProcess(rng);
-
-			var delay = new Delay("Delayer");
-			scheduler.AddProcess(delay);
-
-			scheduler.Connect(rng, "Number", delay, "In");
-			scheduler.Connect(delay, "Out", consoleWriter, "In");
-			scheduler.SetInitialData(delay, "Seconds Between Packets", .5f);
-
-			scheduler.AutoRun();
+			}
 		}
 	}
 }

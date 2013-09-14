@@ -1,44 +1,39 @@
 using System;
+using System.Collections.Generic;
 
 namespace NTransit {
-	public class StandardOutputPort : IOutputPort {
+	public class StandardOutputPort {
 		public string Name { get; set; }
-
-		public bool Closed { get; protected set; }
-
-		public IConnection Connection { get; set; }
-
-		public bool HasConnection { get { return Connection != null; } }
-
 		public Component Process { get; set; }
+		public bool HasCapacity { get { return connectedPort.HasCapacity; } }
+		public bool Connected { get { return connectedPort != null; } }
+		public bool Closed { get; private set; }
+		public bool ConnectedPortClosed { get { return Connected && connectedPort.Closed; } }
 
-		public bool HasComponent { get { return Process != null; } }
+		StandardInputPort connectedPort;
 
-		public bool SendSequenceStart() {
-			return TrySend(new InformationPacket(InformationPacket.PacketType.StartSequence, null), false);
+		public StandardOutputPort(Component process) {
+			Process = process;
 		}
 
-		public bool SendSequenceEnd() {
-			return TrySend(new InformationPacket(InformationPacket.PacketType.EndSequence, null), false);
-		}
-
-		public bool TrySend(object content) {
-			return TrySend(new InformationPacket(content), false);
+		public void ConnectTo(StandardInputPort port) {
+			connectedPort = port;
 		}
 
 		public bool TrySend(InformationPacket ip) {
-			return TrySend(ip, true);
+			return TrySend(ip, false);
 		}
 
-		public bool TrySend(InformationPacket ip, bool releaseIpFromComponent) {
-			if (Closed)	throw new InvalidOperationException(string.Format("Cannot send data on port {0}, it is closed", Name));
-			else if (null == Connection) throw new InvalidOperationException(string.Format("Cannot send data on port {0}, it does not have a connection", Name));
-
-			if (Connection.SendPacketIfCapacityAllows(ip)) {
-				if (releaseIpFromComponent) Process.ReleaseIp(ip);
-				return true;
+		public bool TrySend(InformationPacket ip, bool ignoreClosed) {
+			if (!ignoreClosed && Closed) {
+				throw new InvalidOperationException(string.Format("Cannot send data on closed port '{0}.{1}'", Process.Name, Name));
 			}
-			return false;
+
+			if (!Connected) {
+				throw new InvalidOperationException(string.Format("Cannot send data on unconnected port '{0}.{1}'", Process.Name, Name));
+			}
+
+			return !connectedPort.Closed && connectedPort.TrySend(ip);
 		}
 
 		public void Close() {

@@ -1,53 +1,58 @@
 using System;
-using System.Collections;
 
 namespace NTransit {
-	public class Checkpoint : Component {
-		[InputPort("In")]
-		public StandardInputPort InPort { get; set; }
+	[InputPort("Activate")]
+	public class Checkpoint : PropagatorComponent {
+		bool open;
+		string sequenceId;
 
-		[InputPort("Trigger")]
-		public StandardInputPort TriggerPort { get; set; }
+		public Checkpoint(string name) : base(name) {
+			Receive["Activate"] = data => {
+				data.Accept();
+				Console.WriteLine ("checkpoint opening");
+				open = true;
+			};
 
-		[OutputPort("Out")]
-		public StandardOutputPort OutPort { get; set; }
-
-		public Checkpoint(string name) : base(name) {}
-
-		public override IEnumerator Execute() {
-			while (true) {
-				yield return WaitForPacketOn(TriggerPort);
-				TriggerPort.Receive();
-				UnityEngine.Debug.Log("Checkpoint - Got trigger for Checkpoint");
-//				Console.WriteLine("Checkpoint - Got trigger for Checkpoint");
-
-				if (InPort.HasPacketsWaiting) {
-					UnityEngine.Debug.Log("Checkpoint - packet(s) waiting for Checkpoint");
-//					Console.WriteLine("Checkpoint - packet(s) waiting for Checkpoint");
-					var ip = InPort.Receive();
-					if (InformationPacket.PacketType.StartSequence == ip.Type) {
-						UnityEngine.Debug.Log("Checkpoint - Sequence was waiting");
-//						Console.WriteLine("Checkpoint - Sequence was waiting");
-						do {
-							UnityEngine.Debug.Log("Checkpoint - sending sequence element (" + ip.Type + ") " + ip.Content);
-//							Console.WriteLine ("Checkpoint - sending sequence element (" + ip.Type + ") " + ip.Content);
-							while (!OutPort.TrySend(ip)) yield return WaitForCapacityOn(OutPort);
-							UnityEngine.Debug.Log("Checkpoint - waiting for next packet in sequence");
-//							Console.WriteLine ("Checkpoint - waiting for next packet in sequence");
-							yield return WaitForPacketOn(InPort);
-							ip = InPort.Receive();
-						}
-						while (InformationPacket.PacketType.EndSequence != ip.Type);
-						UnityEngine.Debug.Log("Checkpoint - Done sending sequence");
-//						Console.WriteLine("Checkpoint - Done sending sequence");
+			SequenceStart["In"] = data => {
+				if (open) {
+					var ip = data.Accept();
+					if (sequenceId == null) {
+						Console.WriteLine ("checkpoint recording start of sequence");
+						sequenceId = ip.ContentAs<string>();
 					}
-					UnityEngine.Debug.Log("Checkpoint - sending last/only packet (" + ip.Type + ") " + ip.Content);
-//					Console.WriteLine("Checkpoint - sending last/only packet (" + ip.Type + ") " + ip.Content);
-					while (!OutPort.TrySend(ip)) yield return WaitForCapacityOn(OutPort);
-					UnityEngine.Debug.Log("Checkpoint - Done sending packet(s)");
-//					Console.WriteLine("Checkpoint - Done sending packet(s)");
+					Send("Out", ip);
 				}
-			}
+			};
+
+			SequenceEnd["In"] = data => {
+				var ip = data.Accept();
+				var endingId = ip.ContentAs<string>();
+				if (sequenceId == endingId) {
+					Console.WriteLine("checkpoint closing after sequence");
+					open = false;
+					sequenceId = null;
+				}
+				Send("Out", ip);
+			};
+
+			Receive["In"] = data => {
+				if (open) {
+					Send("Out", data.Accept());
+				}
+				if (sequenceId == null) {
+					Console.WriteLine ("checkpoint closing after single packet");
+					open = false;
+				}
+			};
+		}
+
+		public void Open() {
+			open = true;
+		}
+
+		public void Close() {
+			open = false;
+			sequenceId = null;
 		}
 	}
 }

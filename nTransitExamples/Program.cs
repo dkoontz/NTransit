@@ -38,14 +38,21 @@ namespace NTransitExamples {
 
 
 			var program = @"
-				GetWordList(FileReader).Out => Queue(IpQueue).In
+#				GetWordList(FileReader).Out => Queue(IpQueue).In
+#				'test.txt' => GetWordList.FileName
+				GetWordList(ConvertIEnumerableToInformationPacketStream).Out => Queue(IpQueue).In
+				<Strings> => GetWordList.IEnumerable
 				Queue.Out => WaitUntilAllWordsAreReceived(Gate).In
 				WaitUntilAllWordsAreReceived.Out => ReverseLines(TextReverser).In
-				ReverseLines.Out => Writer(ConsoleWriter).In
+				ReverseLines.Out => Test(TestComponent).In
+				Test.Out => Writer(ConsoleWriter).In
 				GetWordList.AUTO => WaitUntilAllWordsAreReceived.Open
-				'test.txt' => GetWordList.FileName
 			";
-			scheduler = new FbpParser().Parse(program);
+
+			var initialData = new Dictionary<string, object>();
+			initialData["Strings"] = new [] { "The", "quick", "brown", "fox" };
+			scheduler = FbpParser.Parse(program, initialData);
+			scheduler.Init();
 
 			while (scheduler.Tick()) {
 

@@ -74,5 +74,21 @@ namespace NTransit {
 //			}
 			return runningProcesses.Count > 0 || terminatingProcesses.Count > 0;
 		}
+
+		public T GetProcess<T>(string name) where T : Component {
+			var process = registeredProcesses.Find(p => p.Name == name);
+
+			if (process != null) {
+				if (typeof(T).IsAssignableFrom(process.GetType())) {
+					return (T)process;
+				}
+				else {
+					throw new InvalidCastException(string.Format("The process {0} can not be converted to type {1}", name, typeof(T)));
+				}
+			}
+			else {
+				throw new ArgumentException(string.Format("Scheduler does not contain a process named", name));
+			}
+		}
 	}
 }

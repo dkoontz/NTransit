@@ -116,10 +116,10 @@ namespace NTransit {
 					}
 
 					if (resolvedType == null) {
-						throw new ArgumentException(string.Format("Invalid input on line {0}, the type '{1}'declared for process '{2}' could not be found", sourceLineNumber, typeName, componentName));
+						throw new ArgumentException(string.Format("Invalid input on line {0}, the type '{1}' declared for process '{2}' could not be found", sourceLineNumber, typeName, componentName));
 					}
 					if (!typeof(Component).IsAssignableFrom(resolvedType)) {
-						throw new ArgumentException(string.Format("Invalid input on line {0}, the type '{1}'declared for process '{2}' is not a component", sourceLineNumber, typeName, componentName));
+						throw new ArgumentException(string.Format("Invalid input on line {0}, the type '{1}' declared for process '{2}' is not a component", sourceLineNumber, typeName, componentName));
 					}
 
 					var component = (Component)System.Activator.CreateInstance(resolvedType, new [] { componentName });
@@ -128,6 +128,9 @@ namespace NTransit {
 				}
 			}
 
+			if (!components.ContainsKey(componentName)) {
+				throw new ArgumentException(string.Format("Invalid input on line {0}, the process '{1}' has not been declared", sourceLineNumber, componentName));
+			}
 			return components[componentName];
 		}
 	}

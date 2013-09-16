@@ -61,6 +61,12 @@
     <Compile Include="Components\DropIp.cs" />
     <Compile Include="Components\Checkpoint.cs" />
     <Compile Include="FbpParser.cs" />
+    <Compile Include="Components\CollectionStorage.cs" />
+    <Compile Include="Components\ForEach.cs" />
+    <Compile Include="Components\Clone.cs" />
+    <Compile Include="ReadOnlyWrapper.cs" />
+    <Compile Include="PropertyAccessor.cs" />
+    <Compile Include="Components\SetProperty.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

@@ -168,6 +168,8 @@ namespace NTransit {
 		public void SetInputPort(string name, StandardInputPort port) {
 			port.Name = name;
 			inPorts[name] = port;
+			inPorts[name].SequenceStart = data => data.Accept();
+			inPorts[name].SequenceEnd = data => data.Accept();
 		}
 
 		public void SetOutputPort(string name, StandardOutputPort port) {
@@ -363,7 +365,7 @@ namespace NTransit {
 		}
 
 		protected void ValidateInputPortName(string portName) {
-			if (!inPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no out port named '{0}.{1}'", Name, portName));
+			if (!inPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no in port named '{0}.{1}'", Name, portName));
 		}
 
 		protected void ValidateOutputPortName(string portName) {

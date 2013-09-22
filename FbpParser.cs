@@ -8,10 +8,11 @@ namespace NTransit {
 		const string COMMENT = @"^#.*$";
 		const string COMPONENT_DECLARATION = @"^[A-Za-z]+(\w|\(|\)|_)*\.[A-Za-z]+(\w|\(|\)|_)*$";
 		const string COMPONENT_WITH_TYPE_DECLARATION = @"(\w+)\((\w+)\)";
+		const string INITIAL_BOOL_DATA = @"^(true|false)$";
 		const string INITIAL_STRING_DATA = @"^('|"")(.+)\1$";
 		const string INITIAL_FLOAT_DATA = @"^\d+\.\d+$";
 		const string INITIAL_INT_DATA = @"^\d+$";
-		const string INITIAL_PASSED_IN_DATA = @"\<(.+)\>";
+		const string INITIAL_PASSED_IN_DATA = @"^\<(.+)\>$";
 
 		static Dictionary<string, Component> components;
 
@@ -65,6 +66,10 @@ namespace NTransit {
 					else {
 						throw new ArgumentException(string.Format("Initial data {0} was not found in the provided Dictionary", key));
 					}
+				}
+				else if (Regex.IsMatch(senderText, INITIAL_BOOL_DATA)) {
+					var match = Regex.Match(senderText, INITIAL_BOOL_DATA);
+					receiver.SetInitialData(receiverPort, bool.Parse(match.Value));
 				}
 				else if (Regex.IsMatch(senderText, INITIAL_STRING_DATA)) {
 					var match = Regex.Match(senderText, INITIAL_STRING_DATA);

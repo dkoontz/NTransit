@@ -27,6 +27,7 @@ using System.Collections.Generic;
 namespace NTransit {
 	[InputPort("In")]
 	[OutputPort("Out")]
+	[OutputPort("Original")]
 	public class ForEach : Component {
 		public ForEach(string name) : base(name) {
 			Receive["In"] = data => {
@@ -39,6 +40,7 @@ namespace NTransit {
 				else {
 					throw new ArgumentException(string.Format("IP content was {0}, but must be an IEnumerable", ip.Content.GetType()));
 				}
+				Send("Original", ip);
 			};
 		}
 	}

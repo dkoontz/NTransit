@@ -34,7 +34,7 @@ namespace NTransit {
 					continue;
 				}
 
-				var separatorIndex = line.IndexOf("=>");
+				var separatorIndex = line.IndexOf("->");
 				if (separatorIndex < 0) {
 					continue;
 				}

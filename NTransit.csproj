@@ -68,6 +68,8 @@
     <Compile Include="PropertyAccessor.cs" />
     <Compile Include="Components\SetProperty.cs" />
     <Compile Include="Components\SetField.cs" />
+    <Compile Include="Components\TriggerAction.cs" />
+    <Compile Include="IReadOnlyCollection.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

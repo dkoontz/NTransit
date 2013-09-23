@@ -6,16 +6,16 @@ using System.Reflection;
 
 // Big TODO's:
 //
-// FBP / Json importer
+// Type checking of IP content at Port/Connection level based on parameter(s) to InputPort / OutputPort attributes
 // Support thread pool and individual threads
 // Sub-Networks
 // Array Inputs
-// Array Outputs
-// Auto wire unconnected output ports to Drop component
 // Auto wire unconnected Errors component port to default ConsoleWriter or settable property
-// Figure out IP ownership and tracking/disposing
 // Allowing components to execute during Fixed/Late Update
-// Type checking of IP content at Port/Connection level based on parameter(s) to InputPort / OutputPort attributes
+// ? Change all exceptions to write to Errors port
+// ? Figure out IP ownership and tracking/disposing
+// ? Array Outputs
+// ? Auto wire unconnected output ports to Drop component
 
 namespace NTransit {
 	[InputPort("AUTO")]

@@ -10,7 +10,7 @@ Briefly put, Flow Based Programming is an architectural pattern by which you thi
 
 ### NTransit at 30,000 feet
 
-**NTransit is still very early on and I would not recommend anyone using it for anything serious.  A few test applications are being built with it to shake out an major problems and get the various schedulers built out but outside of the problem domains those applications are exploring the component library and to a degree the capabilities are not fully built out.**
+**NTransit is still very early on and I would not recommend anyone using it for anything serious.  A few [test applications](https://github.com/dkoontz/ntransit-spaceinvaders) are being built with it to shake out an major problems and get the various schedulers built out but outside of the problem domains those applications are exploring the component library and to a degree the capabilities are not fully built out.**
 
 NTransit is a FBP runtime for C# 3.5 (.NET and Mono equivalents) and above.  NTransit aims to be usable in a variety of situations such as in desktop applications, server-side, and on mobile devices. To this end, NTransit does not make any assumptions about how your processes are scheduled, instead leaving that up to a pluggable scheduler which can be multi-threaded, single threaded, or some combination of the two, (for example using a thread pool).
 

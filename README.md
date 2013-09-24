@@ -62,10 +62,10 @@ public class AddHeaderTag : Component {
 
 Networks can be created via code or by a string containing a compact representation of a network.  Currently this is a format unique to NTransit but hopefully soon there will be some standardization of a .fbp format (and also a JSON format) that can then be adopted.  The current format uses the following:
 
-`
+```
 'My literal string data' -> NameOfProcess(TypeOfComponent).InputPortName
 NameOfProcess.OutputPortName -> OtherProcess(DifferentComponentType).InputPortName
-`
+```
 
 Types are only declared the first time they are encountered, so the second use of NameOfProcess does not need the parentheses and type declaration.  Literal types that are supported are
 * int

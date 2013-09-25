@@ -17,27 +17,29 @@ namespace NTransit {
 		public CollectionStorage(string name) : base(name) {
 			valuesToRemove = new Queue<object>();
 			valuesToAdd = new Queue<object>();
+		}
 
-			Receive["ICollection"] = data => {
+		public override void Setup() {
+			InPorts["ICollection"].Receive = data => {
 				var collection = data.Accept().ContentAs<IEnumerable<object>>();
 				values = new List<object>();
-
+				
 				foreach (var value in collection) {
 					values.Add(value);
 				}
-
+				
 				readOnlyWrapper = new ReadOnlyWrapper<object>(values);
 			};
-
-			Receive["Add"] = data => {
+			
+			InPorts["Add"].Receive = data => {
 				valuesToAdd.Enqueue(data.Accept().Content);
 			};
-
-			Receive["Remove"] = data => {
+			
+			InPorts["Remove"].Receive = data => {
 				valuesToRemove.Enqueue(data.Accept().Content);
 			};
-
-			Receive["Send"] = data =>  {
+			
+			InPorts["Send"].Receive = data =>  {
 				if (values != null) {
 					data.Accept();
 					if (valuesToRemove.Count > 0 || valuesToAdd.Count > 0) {

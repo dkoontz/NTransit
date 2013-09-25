@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 namespace NTransit {
-	public class StandardOutputPort {
+	public class StandardOutputPort : IOutputPort {
 		public string Name { get; set; }
 		public Component Process { get; set; }
 		public bool HasCapacity { get { return connectedPort.HasCapacity; } }
@@ -10,13 +10,13 @@ namespace NTransit {
 		public bool Closed { get; private set; }
 		public bool ConnectedPortClosed { get { return Connected && connectedPort.Closed; } }
 
-		StandardInputPort connectedPort;
+		IInputPort  connectedPort;
 
 		public StandardOutputPort(Component process) {
 			Process = process;
 		}
 
-		public void ConnectTo(StandardInputPort port) {
+		public void ConnectTo(IInputPort port) {
 			connectedPort = port;
 		}
 

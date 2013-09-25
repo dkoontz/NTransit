@@ -29,8 +29,10 @@ namespace NTransit {
 	[OutputPort("Out")]
 	[OutputPort("Original")]
 	public class ForEach : Component {
-		public ForEach(string name) : base(name) {
-			Receive["In"] = data => {
+		public ForEach(string name) : base(name) { }
+
+		public override void Setup() {
+			InPorts["In"].Receive = data => {
 				var ip = data.Accept();
 				if (typeof(IEnumerable).IsAssignableFrom(ip.Content.GetType())) {
 					foreach (var value in ip.ContentAs<IEnumerable>()) {

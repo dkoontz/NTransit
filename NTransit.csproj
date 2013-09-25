@@ -47,7 +47,6 @@
     <Compile Include="InputPortAttribute.cs" />
     <Compile Include="OutputPortAttribute.cs" />
     <Compile Include="PortAttribute.cs" />
-    <Compile Include="Components\TextReverser.cs" />
     <Compile Include="Components\FileReader.cs" />
     <Compile Include="Components\ConsoleWriter.cs" />
     <Compile Include="Components\ConvertIEnumerableToInformationPacketStream.cs" />
@@ -70,6 +69,8 @@
     <Compile Include="Components\SetField.cs" />
     <Compile Include="Components\TriggerAction.cs" />
     <Compile Include="IReadOnlyCollection.cs" />
+    <Compile Include="IInputPort.cs" />
+    <Compile Include="IOutputPort.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

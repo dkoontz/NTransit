@@ -6,14 +6,18 @@ namespace NTransit {
 		bool open;
 		string sequenceId;
 
-		public Checkpoint(string name) : base(name) {
-			Receive["Activate"] = data => {
+		public Checkpoint(string name) : base(name) { }
+
+		public override void Setup() {
+			base.Setup();
+
+			InPorts["Activate"].Receive = data => {
 				data.Accept();
 				Console.WriteLine ("checkpoint opening");
 				open = true;
 			};
-
-			SequenceStart["In"] = data => {
+			
+			InPorts["In"].SequenceStart = data => {
 				if (open) {
 					var ip = data.Accept();
 					if (sequenceId == null) {
@@ -23,8 +27,8 @@ namespace NTransit {
 					Send("Out", ip);
 				}
 			};
-
-			SequenceEnd["In"] = data => {
+			
+			InPorts["In"].SequenceEnd = data => {
 				var ip = data.Accept();
 				var endingId = ip.ContentAs<string>();
 				if (sequenceId == endingId) {
@@ -34,8 +38,8 @@ namespace NTransit {
 				}
 				Send("Out", ip);
 			};
-
-			Receive["In"] = data => {
+			
+			InPorts["In"].Receive = data => {
 				if (open) {
 					Send("Out", data.Accept());
 				}

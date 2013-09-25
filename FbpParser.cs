@@ -128,6 +128,7 @@ namespace NTransit {
 					}
 
 					var component = (Component)System.Activator.CreateInstance(resolvedType, new [] { componentName });
+					component.Setup();
 					components[componentName] = component;
 					scheduler.AddProcess(component);
 				}

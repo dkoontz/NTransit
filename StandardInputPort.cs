@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 
 namespace NTransit {
-	public class StandardInputPort {
+	public class StandardInputPort : IInputPort {
 		public string Name { get; set; }
 		public Component Process { get; set; }
-		public bool Greedy { get; set; }
+//		public bool Greedy { get; set; }
 		public int ConnectionCapacity { get; set; }
 		public bool Connected { get { return upstreamPorts.Count > 0; } }
 		public bool AllUpstreamPortsClosed {
@@ -26,21 +26,21 @@ namespace NTransit {
 		public int QueuedPacketCount { get { return queue.Count; } }
 		public bool Closed { get; private set; }
 
-		public Action<IpOffer> Receive;
-		public Action<IpOffer> SequenceStart;
-		public Action<IpOffer> SequenceEnd;
+		public Action<IpOffer> Receive { get; set; }
+		public Action<IpOffer> SequenceStart { get; set; }
+		public Action<IpOffer> SequenceEnd { get; set; }
 
 		object lockObject = new object();
 		Queue<InformationPacket> queue;
 		IpOffer ipOffer;
 		InformationPacket initialIp;
 		bool initialIpSent;
-		List<StandardOutputPort> upstreamPorts;
+		List<IOutputPort> upstreamPorts;
 
 		public StandardInputPort(int connectionCapacity, Component process) {
 			this.ConnectionCapacity = connectionCapacity;
 			queue = new Queue<InformationPacket>(connectionCapacity);
-			upstreamPorts = new List<StandardOutputPort>();
+			upstreamPorts = new List<IOutputPort>();
 			Process = process;
 			SequenceStart = data => data.Accept();
 			SequenceEnd = data => data.Accept();
@@ -56,6 +56,7 @@ namespace NTransit {
 			}
 			lock (lockObject) {
 				if (queue.Count < ConnectionCapacity) {
+					// check packet contents for type if a type restriction exists
 					queue.Enqueue(ip);
 					return true;
 				}
@@ -98,7 +99,7 @@ namespace NTransit {
 			return false;
 		}
 
-		public void NotifyOfConnection(StandardOutputPort port) {
+		public void NotifyOfConnection(IOutputPort port) {
 			upstreamPorts.Add(port);
 		}
 

@@ -6,9 +6,13 @@ namespace NTransit {
 	public class TriggerAction : PropagatorComponent {
 		string actionName;
 
-		public TriggerAction(string name) : base(name) {
-			Receive["Action"] = data => actionName = data.Accept().ContentAs<string>();
-			Receive["In"] = data => {
+		public TriggerAction(string name) : base(name) { }
+
+		public override void Setup() {
+			base.Setup();
+		
+			InPorts["Action"].Receive = data => actionName = data.Accept().ContentAs<string>();
+			InPorts["In"].Receive = data => {
 				var ip = data.Accept();
 				var target = ip.Content;
 				var action = target.GetType().GetMethod(actionName);

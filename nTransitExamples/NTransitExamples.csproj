@@ -39,11 +39,16 @@
     <Reference Include="System.Threading.Tasks.Dataflow">
       <HintPath>..\lib\System.Threading.Tasks.Dataflow.dll</HintPath>
     </Reference>
+    <Reference Include="nunit.framework, Version=2.4.8.0, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77">
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestComponent.cs" />
+    <Compile Include="Tests\TextReverserTest.cs" />
+    <Compile Include="Components\TextReverser.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -51,5 +56,13 @@
       <Project>{BF405721-20FF-4699-B2CF-B300C5A4CEDB}</Project>
       <Name>NTransit</Name>
     </ProjectReference>
+    <ProjectReference Include="..\TransitTest\NTransitTest.csproj">
+      <Project>{87CDAA0F-37D3-4A3C-BB4E-55A7E4FF5A7E}</Project>
+      <Name>NTransitTest</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Tests\" />
+    <Folder Include="Components\" />
   </ItemGroup>
 </Project>

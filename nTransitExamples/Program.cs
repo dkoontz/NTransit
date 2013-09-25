@@ -1,12 +1,13 @@
 using System;
 using NTransit;
+using NTransitTest;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Generic;
 
 namespace NTransitExamples {
 	class MainClass {
-		static SingleThreadedScheduler scheduler;
+//		static SingleThreadedScheduler scheduler;
 
 		public static void Main() {
 //			var converter = new ConvertIEnumerableToInformationPacketStream("Convert IEnumerable");
@@ -36,27 +37,38 @@ namespace NTransitExamples {
 //			scheduler.AddProcess(reverser);
 //			scheduler.AddProcess(writer);
 
+//
+//			var program = @"
+//#				GetWordList(FileReader).Out => Queue(IpQueue).In
+//#				'test.txt' => GetWordList.FileName
+//				GetWordList(ConvertIEnumerableToInformationPacketStream).Out => Queue(IpQueue).In
+//				<Strings> => GetWordList.IEnumerable
+//				Queue.Out => WaitUntilAllWordsAreReceived(Gate).In
+//				WaitUntilAllWordsAreReceived.Out => ReverseLines(TextReverser).In
+//				ReverseLines.Out => Test(TestComponent).In
+//				Test.Out => Writer(ConsoleWriter).In
+//				GetWordList.AUTO => WaitUntilAllWordsAreReceived.Open
+//			";
+//
+//			var initialData = new Dictionary<string, object>();
+//			initialData["Strings"] = new [] { "The", "quick", "brown", "fox" };
+//			scheduler = FbpParser.Parse(program, initialData);
+//			scheduler.Init();
+//
+//			while (scheduler.Tick()) {
+//
+//			}
 
-			var program = @"
-#				GetWordList(FileReader).Out => Queue(IpQueue).In
-#				'test.txt' => GetWordList.FileName
-				GetWordList(ConvertIEnumerableToInformationPacketStream).Out => Queue(IpQueue).In
-				<Strings> => GetWordList.IEnumerable
-				Queue.Out => WaitUntilAllWordsAreReceived(Gate).In
-				WaitUntilAllWordsAreReceived.Out => ReverseLines(TextReverser).In
-				ReverseLines.Out => Test(TestComponent).In
-				Test.Out => Writer(ConsoleWriter).In
-				GetWordList.AUTO => WaitUntilAllWordsAreReceived.Open
-			";
+			var component = new TextReverser("");
+			var inPort = new MockInputPort();
+			var outPort = new MockOutputPort();
+			component.SetInputPort("In", inPort);
+			component.SetOutputPort("Out", outPort);
+			component.Setup();
+			component.Startup();
+			inPort.TrySend(new InformationPacket(""));
 
-			var initialData = new Dictionary<string, object>();
-			initialData["Strings"] = new [] { "The", "quick", "brown", "fox" };
-			scheduler = FbpParser.Parse(program, initialData);
-			scheduler.Init();
-
-			while (scheduler.Tick()) {
-
-			}
+			while (component.Tick()) {}
 		}
 	}
 }

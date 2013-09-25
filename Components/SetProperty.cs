@@ -10,10 +10,12 @@ namespace NTransit {
 		object value;
 		string propertyName;
 
-		public SetProperty(string name) : base(name) {
-			Receive["Value"] = data => value = data.Accept().Content;
-			Receive["Property"] = data => propertyName = data.Accept().ContentAs<string>();
-			Receive["Object"] = data => {
+		public SetProperty(string name) : base(name) { }
+
+		public override void Setup() {
+			InPorts["Value"].Receive = data => value = data.Accept().Content;
+			InPorts["Property"].Receive = data => propertyName = data.Accept().ContentAs<string>();
+			InPorts["Object"].Receive = data => {
 				var ip = data.Accept();
 				var target = ip.Content;
 

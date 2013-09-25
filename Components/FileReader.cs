@@ -6,8 +6,10 @@ namespace NTransit {
 	public class FileReader : SourceComponent {
 		StreamReader reader;
 
-		public FileReader(string name) : base(name) {
-			Receive["FileName"] = data => {
+		public FileReader(string name) : base(name) { }
+
+		public override void Setup() {
+			InPorts["FileName"].Receive = data => {
 				var fileName = data.Accept().ContentAs<string>();
 				try {
 					reader = new StreamReader(fileName);
@@ -16,16 +18,18 @@ namespace NTransit {
 					throw new ArgumentException(string.Format("File name '{0}' sent to {1}.FileName does not exist", fileName, Name));
 				}
 			};
+		}
 
-			Update = () => {
-				while (HasCapacity("Out") && !reader.EndOfStream) {
-					SendNew("Out", reader.ReadLine()); 
-					if (reader.EndOfStream) Status = ProcessStatus.Terminated;
-				}
-				return false;
-			};
+		protected override bool Update() {
+			while (HasCapacity("Out") && !reader.EndOfStream) {
+				SendNew("Out", reader.ReadLine()); 
+				if (reader.EndOfStream) Status = ProcessStatus.Terminated;
+			}
+			return false;
+		}
 
-			End = () => reader.Close();
+		protected override void End() {
+			reader.Close();
 		}
 	}
 }

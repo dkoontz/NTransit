@@ -6,26 +6,30 @@ namespace NTransit {
 	public class Gate : PropagatorComponent {
 		bool open;
 
-		public Gate(string name) : base(name) {
-			Receive["Open"] = data => {
+		public Gate(string name) : base(name) { }
+
+		public override void Setup() {
+			base.Setup();
+
+			InPorts["Open"].Receive = data => {
 				data.Accept();
 				open = true;
 			};
-
-			Receive["Close"] = data => {
+			
+			InPorts["Close"].Receive = data => {
 				data.Accept();
 				open = false;
 			};
-
-			SequenceStart["In"] = data => {
+			
+			InPorts["In"].SequenceStart = data => {
 				if (open) Send("Out", data.Accept());
 			};
-
-			SequenceEnd["In"] = data => {
+			
+			InPorts["In"].SequenceEnd = data => {
 				if (open) Send("Out", data.Accept());
 			};
-
-			Receive["In"] = data => {
+			
+			InPorts["In"].Receive = data => {
 				if (open) Send("Out", data.Accept());
 			};
 		}

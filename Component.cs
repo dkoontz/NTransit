@@ -23,56 +23,56 @@ namespace NTransit {
 	[OutputPort("Errors")]
 	public abstract class Component {
 		// This inner class exists to make the Receive["In"] = data => ... syntax possible
-		protected class DataReceivers {
-			Component parentComponent;
-
-			public DataReceivers(Component parent) {
-				parentComponent = parent;
-			}
-
-			public Action<IpOffer> this[string portName] {
-				set {
-					if (!parentComponent.inPorts.ContainsKey(portName)) {
-						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
-					}
-					parentComponent.inPorts[portName].Receive = value;
-				}
-			}
-		}
-
-		protected class SequenceStartReceivers {
-			Component parentComponent;
-
-			public SequenceStartReceivers(Component parent) {
-				parentComponent = parent;
-			}
-
-			public Action<IpOffer> this[string portName] {
-				set {
-					if (!parentComponent.inPorts.ContainsKey(portName)) {
-						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
-					}
-					parentComponent.inPorts[portName].SequenceStart = value;
-				}
-			}
-		}
-
-		protected class SequenceEndReceivers {
-			Component parentComponent;
-
-			public SequenceEndReceivers(Component parent) {
-				parentComponent = parent;
-			}
-
-			public Action<IpOffer> this[string portName] {
-				set {
-					if (!parentComponent.inPorts.ContainsKey(portName)) {
-						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
-					}
-					parentComponent.inPorts[portName].SequenceEnd = value;
-				}
-			}
-		}
+//		protected class DataReceivers {
+//			Component parentComponent;
+//
+//			public DataReceivers(Component parent) {
+//				parentComponent = parent;
+//			}
+//
+//			public Action<IpOffer> this[string portName] {
+//				set {
+//					if (!parentComponent.InPorts.ContainsKey(portName)) {
+//						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+//					}
+//					parentComponent.InPorts[portName].Receive = value;
+//				}
+//			}
+//		}
+//
+//		protected class SequenceStartReceivers {
+//			Component parentComponent;
+//
+//			public SequenceStartReceivers(Component parent) {
+//				parentComponent = parent;
+//			}
+//
+//			public Action<IpOffer> this[string portName] {
+//				set {
+//					if (!parentComponent.InPorts.ContainsKey(portName)) {
+//						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+//					}
+//					parentComponent.InPorts[portName].SequenceStart = value;
+//				}
+//			}
+//		}
+//
+//		protected class SequenceEndReceivers {
+//			Component parentComponent;
+//
+//			public SequenceEndReceivers(Component parent) {
+//				parentComponent = parent;
+//			}
+//
+//			public Action<IpOffer> this[string portName] {
+//				set {
+//					if (!parentComponent.InPorts.ContainsKey(portName)) {
+//						throw new ArgumentException(string.Format("Port '{0}.{1}' does not exist", parentComponent.Name, portName));
+//					}
+//					parentComponent.InPorts[portName].SequenceEnd = value;
+//				}
+//			}
+//		}
 
 		class PendingPacket {
 			public string Port;
@@ -93,9 +93,7 @@ namespace NTransit {
 
 		public string Name { get; protected set; }
 		public ProcessStatus Status { get; protected set; }
-		public Action Start;
-		public Func<bool> Update;
-		public Action End;
+
 		public bool AutoStart { 
 			get {
 				var hasAutoStartAttribute = false;
@@ -106,7 +104,7 @@ namespace NTransit {
 				}
 
 				var allInputPortsHaveInitialData = true;
-				foreach (var kvp in inPorts) {
+				foreach (var kvp in InPorts) {
 					if (kvp.Key == "AUTO") {
 						continue;
 					}
@@ -120,7 +118,7 @@ namespace NTransit {
 		}
 		public bool HasInputPacketWaiting {
 			get {
-				foreach (var kvp in inPorts) {
+				foreach (var kvp in InPorts) {
 					if (kvp.Value.HasPacketWaiting) {
 						return true;
 					}
@@ -132,60 +130,57 @@ namespace NTransit {
 		public bool HasOutputPacketWaiting { get { return pendingPackets.Count > 0; } }
 
 		protected bool DoNotTerminateWhenInputPortsAreClosed { get; set; }
-		protected DataReceivers Receive;
-		protected SequenceStartReceivers SequenceStart;
-		protected SequenceEndReceivers SequenceEnd;
+//		protected DataReceivers Receive;
+//		protected SequenceStartReceivers SequenceStart;
+//		protected SequenceEndReceivers SequenceEnd;
 
-		Dictionary<string, StandardInputPort> inPorts;
-		Dictionary<string, StandardOutputPort> outPorts;
+		protected Dictionary<string, IInputPort> InPorts { get; private set; }
+		protected Dictionary<string, IOutputPort> OutPorts { get; private set; }
 		Queue<PendingPacket> pendingPackets;
 		Dictionary<string, Stack<string>> sequenceIds;
 
-		protected Component(string name) : this(name, true) {}
-
-		protected Component(string name, bool autoCreatePorts) {
+		protected Component(string name) {
 			Name = name;
 
 			pendingPackets = new Queue<PendingPacket>();
 			sequenceIds = new Dictionary<string, Stack<string>>();
-			Receive = new DataReceivers(this);
-			SequenceStart = new SequenceStartReceivers(this);
-			SequenceEnd = new SequenceEndReceivers(this);
+//			Receive = new DataReceivers(this);
+//			SequenceStart = new SequenceStartReceivers(this);
+//			SequenceEnd = new SequenceEndReceivers(this);
 			Status = ProcessStatus.Unstarted;
+			InPorts = new Dictionary<string, IInputPort>();
+			OutPorts = new Dictionary<string, IOutputPort>();
 
-			if (autoCreatePorts) {
-				inPorts = new Dictionary<string, StandardInputPort>();
-				outPorts = new Dictionary<string, StandardOutputPort>();
-				CreatePorts();
-			}
+			CreatePorts();
 		}
 
-		protected Component(string name, Dictionary<string, StandardInputPort> inputPorts, Dictionary<string, StandardOutputPort> outputPorts) : this(name, false) {
-			inPorts = inputPorts;
-			outPorts = outputPorts;
-		}
+//		protected Component(string name, Dictionary<string, IInputPort> inputPorts, Dictionary<string, IOutputPort> outputPorts) : this(name, false) {
+//			inPorts = inputPorts;
+//			outPorts = outputPorts;
+//		}
 
-		public void SetInputPort(string name, StandardInputPort port) {
+		public abstract void Setup();
+
+		public void SetInputPort(string name, IInputPort port) {
 			port.Name = name;
-			inPorts[name] = port;
-			inPorts[name].SequenceStart = data => data.Accept();
-			inPorts[name].SequenceEnd = data => data.Accept();
+			InPorts[name] = port;
+			InPorts[name].SequenceStart = data => data.Accept();
+			InPorts[name].SequenceEnd = data => data.Accept();
 		}
 
-		public void SetOutputPort(string name, StandardOutputPort port) {
+		public void SetOutputPort(string name, IOutputPort port) {
 			port.Name = name;
-			outPorts[name] = port;
-			pendingPackets = new Queue<PendingPacket>();
+			OutPorts[name] = port;
 		}
 
 		public void ConnectTo(string outPortName, Component process, string inPortName) {
 			ValidateOutputPortName(outPortName);
-			process.AddConnectBetween(outPorts[outPortName], inPortName);
+			process.AddConnectBetween(OutPorts[outPortName], inPortName);
 		}
 
 		public void ConnectTo(string outPortName, Component process, string inPortName, int capacity) {
 			ValidateOutputPortName(outPortName);
-			process.AddConnectBetween(outPorts[outPortName], inPortName, capacity);
+			process.AddConnectBetween(OutPorts[outPortName], inPortName, capacity);
 		}
 
 		public void SetInitialData(string portName, object value) {
@@ -194,30 +189,26 @@ namespace NTransit {
 
 		public void SetInitialData(string portName, InformationPacket ip) {
 			ValidateInputPortName(portName);
-			inPorts[portName].SetInitialData(ip);
+			InPorts[portName].SetInitialData(ip);
 		}
 
 		public void Startup() {
 			Status = ProcessStatus.Active;
-			if (Start != null) {
-				Start();
-			}
+			Start();
 		}
 
 		public void Shutdown() {
-			if (End != null) {
-				End();
-			}
+			End();
 
-			if (outPorts["AUTO"].Connected) {
+			if (OutPorts["AUTO"].Connected) {
 				Send("AUTO", new InformationPacket(null, InformationPacket.PacketType.Auto));
 			}
 
-			foreach (var port in inPorts.Values) {
+			foreach (var port in InPorts.Values) {
 				port.Close();
 			}
 
-			foreach (var port in outPorts.Values) {
+			foreach (var port in OutPorts.Values) {
 				port.Close();
 			}
 
@@ -227,7 +218,7 @@ namespace NTransit {
 			PendingPacket firstPacket = null;
 			while (pendingPackets.Count > 0 && firstPacket != pendingPackets.Peek()) {
 				var pendingPacket = pendingPackets.Dequeue();
-				if (!outPorts[pendingPacket.Port].ConnectedPortClosed && !outPorts[pendingPacket.Port].TrySend(pendingPacket.Ip, true)) {
+				if (!OutPorts[pendingPacket.Port].ConnectedPortClosed && !OutPorts[pendingPacket.Port].TrySend(pendingPacket.Ip, true)) {
 					if (firstPacket == null) {
 						firstPacket = pendingPacket;
 					}
@@ -248,22 +239,23 @@ namespace NTransit {
 				return false;
 			}
 			else {
-				var sentPacket = false;
+				var packetWasSentThisTick = false;
 				if (HasInputPacketWaiting) {
 					Status = ProcessStatus.Active;
-					foreach (var kvp in inPorts) {
-						sentPacket = kvp.Value.Tick() || sentPacket;
+					foreach (var kvp in InPorts) {
+						packetWasSentThisTick = kvp.Value.Tick() || packetWasSentThisTick;
 					}
 				}
 
-				if (Update != null) {
-					return Update() || sentPacket;
-				}
-				else {
-					return sentPacket;
-				}
+				return Update() || packetWasSentThisTick;
 			}
 		}
+
+		protected virtual void Start() { }
+
+		protected virtual bool Update() { return false; }
+
+		protected virtual void End() { }
 
 		protected void SendNew(string port, object o) {
 			Send(port, new InformationPacket(o));
@@ -275,14 +267,14 @@ namespace NTransit {
 
 		protected void Send(string port, InformationPacket ip) {
 			ValidateOutputPortName(port);
-			if (!outPorts[port].TrySend(ip)) {
+			if (!OutPorts[port].TrySend(ip)) {
 				pendingPackets.Enqueue(new PendingPacket(port, ip));
 			}
 		}
 
 		protected bool TrySend(string port, InformationPacket ip) {
 			ValidateOutputPortName(port);
-			return outPorts[port].TrySend(ip);
+			return OutPorts[port].TrySend(ip);
 		}
 
 		protected void SendSequenceStart(string port) {
@@ -298,11 +290,11 @@ namespace NTransit {
 		}
 
 		protected bool OutportIsConnected(string port) {
-			return outPorts[port].Connected;
+			return OutPorts[port].Connected;
 		}
 
 		protected bool HasCapacity(string port) {
-			return outPorts[port].HasCapacity;
+			return OutPorts[port].HasCapacity;
 		}
 
 		protected void CreatePorts() {
@@ -323,7 +315,7 @@ namespace NTransit {
 		protected bool AllUpstreamPortsAreClosed() {
 			var anyConnected = false;
 
-			foreach (var port in inPorts.Values) {
+			foreach (var port in InPorts.Values) {
 				if (port.Connected) {
 					anyConnected = true;
 				}
@@ -333,7 +325,7 @@ namespace NTransit {
 			}
 			else {
 				var allClosed = true;
-				foreach (var port in inPorts.Values) {
+				foreach (var port in InPorts.Values) {
 					if (port.Connected && !port.AllUpstreamPortsClosed) {
 						allClosed = false;
 					}
@@ -345,7 +337,7 @@ namespace NTransit {
 		protected bool AllDownstreamPortsAreClosed() {
 			var anyConnected = false;
 
-			foreach (var port in outPorts.Values) {
+			foreach (var port in OutPorts.Values) {
 				if (port.Connected) {
 					anyConnected = true;
 				}
@@ -354,8 +346,8 @@ namespace NTransit {
 				return false;
 			}
 			else {
-				var allClosed = outPorts.Count > 0;
-				foreach (var port in outPorts.Values) {
+				var allClosed = OutPorts.Count > 0;
+				foreach (var port in OutPorts.Values) {
 					if (port.Connected && !port.ConnectedPortClosed) {
 						allClosed = false;
 					}
@@ -365,23 +357,23 @@ namespace NTransit {
 		}
 
 		protected void ValidateInputPortName(string portName) {
-			if (!inPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no in port named '{0}.{1}'", Name, portName));
+			if (!InPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no in port named '{0}.{1}'", Name, portName));
 		}
 
 		protected void ValidateOutputPortName(string portName) {
-			if (!outPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no out port named '{0}.{1}'", Name, portName));
+			if (!OutPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no out port named '{0}.{1}'", Name, portName));
 		}
 
-		void AddConnectBetween(StandardOutputPort outPort, string inputPortName) {
+		void AddConnectBetween(IOutputPort outPort, string inputPortName) {
 			ValidateInputPortName(inputPortName);
-			var inPort = inPorts[inputPortName];
+			var inPort = InPorts[inputPortName];
 			outPort.ConnectTo(inPort);
 			inPort.NotifyOfConnection(outPort);
 		}
 
-		void AddConnectBetween(StandardOutputPort port, string inputPortName, int capacity) {
+		void AddConnectBetween(IOutputPort port, string inputPortName, int capacity) {
 			AddConnectBetween(port, inputPortName);
-			inPorts[inputPortName].ConnectionCapacity = capacity;
+			InPorts[inputPortName].ConnectionCapacity = capacity;
 		}
 	}
 }

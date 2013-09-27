@@ -6,10 +6,6 @@ using System.Reflection;
 
 // Big TODO's:
 //
-// Type checking of IP content at Port/Connection level based on parameter(s) to InputPort / OutputPort attributes
-// Support thread pool and individual threads
-// Sub-Networks
-// Array Inputs
 // Auto wire unconnected Errors component port to default ConsoleWriter or settable property
 // Allowing components to execute during Fixed/Late Update
 // ? Change all exceptions to write to Errors port
@@ -74,7 +70,7 @@ namespace NTransit {
 //			}
 //		}
 
-		class PendingPacket {
+		protected class PendingPacket {
 			public string Port;
 			public InformationPacket Ip;
 
@@ -136,8 +132,8 @@ namespace NTransit {
 
 		protected Dictionary<string, IInputPort> InPorts { get; private set; }
 		protected Dictionary<string, IOutputPort> OutPorts { get; private set; }
-		Queue<PendingPacket> pendingPackets;
-		Dictionary<string, Stack<string>> sequenceIds;
+		protected Queue<PendingPacket> pendingPackets;
+		protected Dictionary<string, Stack<string>> sequenceIds;
 
 		protected Component(string name) {
 			Name = name;
@@ -298,16 +294,36 @@ namespace NTransit {
 		}
 
 		protected void CreatePorts() {
-			// TODO: enable the specification of custom port types in the attribute 
-			// and instantiate that instead of just StandardInputPort / StandardOutputPort
 			foreach (var attribute in GetType().GetCustomAttributes(true)) {
 				if (attribute is InputPortAttribute) {
 					var inPort = attribute as InputPortAttribute;
-					SetInputPort(inPort.Name, new StandardInputPort(1, this));
+					var type = typeof(StandardInputPort);
+					if (inPort.Type != null) {
+						if (typeof(IInputPort).IsAssignableFrom(inPort.Type)) {
+							type = inPort.Type;
+						}
+						else {
+							throw new ArgumentException(string.Format("The InputPort type '{0}' specified on port '{1}' of component '{2}' does not implement IInputPort", inPort.Type, inPort.Name, GetType()));
+						}
+					}
+
+					var port = Activator.CreateInstance(type, new object[] { inPort.Capacity, this }) as IInputPort;
+					SetInputPort(inPort.Name, port);
+//					SetInputPort(inPort.Name, new StandardInputPort(inPort.Capacity, this));
 				}
 				else if (attribute is OutputPortAttribute) {
 					var outPort = attribute as OutputPortAttribute;
-					SetOutputPort(outPort.Name, new StandardOutputPort(this));
+					var type = typeof(StandardOutputPort);
+					if (outPort.Type != null) {
+						if (typeof(IOutputPort).IsAssignableFrom(outPort.Type)) {
+							type = outPort.Type;
+						}
+						else {
+							throw new ArgumentException(string.Format("The OutputPort type '{0}' specified on port '{1}' of component '{2}' does not implement IOutputPort", outPort.Type, outPort.Name, GetType()));
+						}
+					}
+					var port = Activator.CreateInstance(type, new object[] { this }) as IOutputPort;
+					SetOutputPort(outPort.Name, port);
 				}
 			}
 		}

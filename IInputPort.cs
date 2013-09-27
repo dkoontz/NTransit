@@ -4,7 +4,7 @@ namespace NTransit {
 	public interface IInputPort {
 		string Name { get; set; }
 		Component Process { get; set; }
-//		bool Greedy { get; set; }
+		bool Greedy { get; set; }
 		int ConnectionCapacity { get; set; }
 		bool Connected { get; }
 		bool AllUpstreamPortsClosed { get; }

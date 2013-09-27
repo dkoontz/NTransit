@@ -31,14 +31,20 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="NUnit.Should">
+      <HintPath>lib\NUnit.Should.dll</HintPath>
+    </Reference>
     <Reference Include="nunit.framework">
-      <Private>False</Private>
+      <HintPath>lib\nunit.framework.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MockOutputPort.cs" />
-    <Compile Include="MockInputPort.cs" />
     <Compile Include="Components\ForEachTest.cs" />
+    <Compile Include="StandardInputPortTest.cs" />
+    <Compile Include="Mocks\MockConnection.cs" />
+    <Compile Include="ComponentTest.cs" />
+    <Compile Include="Mocks\MockInputPort.cs" />
+    <Compile Include="Mocks\MockOutputPort.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -49,5 +55,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Components\" />
+    <Folder Include="Mocks\" />
   </ItemGroup>
 </Project>

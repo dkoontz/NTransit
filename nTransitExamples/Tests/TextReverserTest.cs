@@ -59,7 +59,6 @@ namespace NTransitExamples {
 			component.Tick();
 
 			Assert.AreEqual(1, outPort.SentPackets.Count);
-
 			Assert.AreEqual("0987654321\t\n_)(*&^%$#@!~", outPort.SentPackets[0].Content);
 		}
 	}

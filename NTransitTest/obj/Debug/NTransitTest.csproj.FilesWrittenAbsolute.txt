@@ -1,0 +1,2 @@
+/Users/dkoontz/dev/Transit/TransitTest/bin/Debug/NTransit.dll
+/Users/dkoontz/dev/Transit/TransitTest/bin/Debug/NTransit.dll.mdb

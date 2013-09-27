@@ -6,7 +6,7 @@ namespace NTransit {
 	public class StandardInputPort : IInputPort {
 		public string Name { get; set; }
 		public Component Process { get; set; }
-//		public bool Greedy { get; set; }
+		public bool Greedy { get; set; }
 		public int ConnectionCapacity { get; set; }
 		public bool Connected { get { return upstreamPorts.Count > 0; } }
 		public bool AllUpstreamPortsClosed {
@@ -41,6 +41,7 @@ namespace NTransit {
 			this.ConnectionCapacity = connectionCapacity;
 			queue = new Queue<InformationPacket>(connectionCapacity);
 			upstreamPorts = new List<IOutputPort>();
+			Closed = false;
 			Process = process;
 			SequenceStart = data => data.Accept();
 			SequenceEnd = data => data.Accept();
@@ -57,8 +58,11 @@ namespace NTransit {
 			lock (lockObject) {
 				if (queue.Count < ConnectionCapacity) {
 					// check packet contents for type if a type restriction exists
-					queue.Enqueue(ip);
-					return true;
+					if (ValidatePacketContentType(ip)) {
+						queue.Enqueue(ip);
+						return true;
+					}
+					throw new ArgumentException(string.Format("IP content of type {0} is not valid due to the Input port's type restriction, valid types are {1}", ip.Content.GetType(), ValidTypeDescription));
 				}
 				
 				return false;
@@ -66,37 +70,41 @@ namespace NTransit {
 		}
 
 		public bool Tick() {
-			if (Receive == null || Closed) {
+			if (Closed) {
 				return false;
 			}
 
-			if (ipOffer != null) {
-				DispatchOffer(ipOffer);
-			}
-			else if (!initialIpSent && initialIp != null) {
-				ipOffer = new IpOffer(initialIp);
-				DispatchOffer(ipOffer);
-			}
-			else if (queue.Count > 0) {
-				ipOffer = new IpOffer(queue.Peek());
-				DispatchOffer(ipOffer);
-			}
-
-			if (ipOffer != null && ipOffer.Accepted) {
-				if (!initialIpSent && initialIp != null) {
-					initialIpSent = true;
+			var packetWasSent = false;
+			do {
+				if (ipOffer != null) {
+					DispatchOffer(ipOffer);
 				}
-				else {
-					lock (lockObject) {
-						queue.Dequeue();
+				else if (!initialIpSent && initialIp != null) {
+					ipOffer = new IpOffer(initialIp);
+					DispatchOffer(ipOffer);
+				}
+				else if (queue.Count > 0) {
+					ipOffer = new IpOffer(queue.Peek());
+					DispatchOffer(ipOffer);
+				}
+
+				if (ipOffer != null && ipOffer.Accepted) {
+					if (!initialIpSent && initialIp != null) {
+						initialIpSent = true;
 					}
+					else {
+						lock (lockObject) {
+							queue.Dequeue();
+						}
+					}
+					
+					ipOffer = null;
+					packetWasSent = true;
 				}
-
-				ipOffer = null;
-				return true;
 			}
+			while (Greedy && queue.Count > 0 && ipOffer == null);
 
-			return false;
+			return packetWasSent;
 		}
 
 		public void NotifyOfConnection(IOutputPort port) {
@@ -107,21 +115,181 @@ namespace NTransit {
 			Closed = true;
 		}
 
+		protected virtual string ValidTypeDescription { 
+			get { return ""; }
+		}
+
+		protected virtual bool ValidatePacketContentType(InformationPacket ip) {
+			return true;
+		}
+
 		void DispatchOffer(IpOffer offer) {
 			switch (offer.Type) {
 				case InformationPacket.PacketType.Data:
-					Receive(offer);
+					if (Receive != null) {
+						Receive(offer);
+					}
 					break;
 				case InformationPacket.PacketType.StartSequence:
-					SequenceStart(offer);
+					if (SequenceStart != null) {
+						SequenceStart(offer);
+					}
 					break;
 				case InformationPacket.PacketType.EndSequence:
-					SequenceEnd(offer);
+					if (SequenceEnd != null) {
+						SequenceEnd(offer);
+					}
 					break;
 				case InformationPacket.PacketType.Auto:
-					Receive(offer);
+					if (Receive != null) {
+						Receive(offer);
+					}
 					break;
 			}
+		}
+	}
+
+	public class StandardInputPort<T1> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return typeof(T1).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return typeof(T1).ToString(); }
+		}
+	}
+
+	public class StandardInputPort<T1, T2> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return 	typeof(T1).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T2).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return string.Format("{0}, {1}", typeof(T1), typeof(T2)); }
+		}
+	}
+
+	public class StandardInputPort<T1, T2, T3> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return 	typeof(T1).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T2).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T3).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return string.Format("{0}, {1}, {2}", typeof(T1), typeof(T2), typeof(T3)); }
+		}
+	}
+
+	public class StandardInputPort<T1, T2, T3, T4> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return 	typeof(T1).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T2).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T3).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T4).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return string.Format("{0}, {1}, {2}, {3}", typeof(T1), typeof(T2), typeof(T3), typeof(T4)); }
+		}
+	}
+
+	public class StandardInputPort<T1, T2, T3, T4, T5> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return 	typeof(T1).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T2).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T3).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T4).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T5).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return string.Format("{0}, {1}, {2}, {3}, {4}", typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5)); }
+		}
+	}
+
+	public class StandardInputPort<T1, T2, T3, T4, T5, T6> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return 	typeof(T1).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T2).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T3).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T4).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T5).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T6).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return string.Format("{0}, {1}, {2}, {3}, {4}, {5}", typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6)); }
+		}
+	}
+
+	public class StandardInputPort<T1, T2, T3, T4, T5, T6, T7> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return 	typeof(T1).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T2).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T3).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T4).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T5).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T6).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T7).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}", typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7)); }
+		}
+	}
+
+	public class StandardInputPort<T1, T2, T3, T4, T5, T6, T7, T8> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return 	typeof(T1).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T2).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T3).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T4).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T5).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T6).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T7).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T8).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}", typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8)); }
+		}
+	}
+
+	public class StandardInputPort<T1, T2, T3, T4, T5, T6, T7, T8, T9> : StandardInputPort {
+		public StandardInputPort(int connectionCapacity, Component process) : base(connectionCapacity, process){ }
+
+		protected override bool ValidatePacketContentType(InformationPacket ip) {
+			return 	typeof(T1).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T2).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T3).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T4).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T5).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T6).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T7).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T8).IsAssignableFrom(ip.Content.GetType()) ||
+					typeof(T9).IsAssignableFrom(ip.Content.GetType());
+		}
+
+		protected override string ValidTypeDescription { 
+			get { return string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}", typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9)); }
 		}
 	}
 }

@@ -10,14 +10,18 @@ namespace NTransitTest {
 		public bool Connected { get; set; }
 		public bool Closed { get; set; }
 		public bool ConnectedPortClosed { get; set; }
+		public bool ResponseToUseForTrySend { get; set; }
 
 		public List<InformationPacket> SentPackets { get; private set; }
 
-		public MockOutputPort() { 
+		public MockOutputPort() : this(null) { }
+
+		public MockOutputPort(Component process) { 
 			HasCapacity = true;
 			Connected = true;
 			Closed = false;
 			ConnectedPortClosed = false;
+			ResponseToUseForTrySend = true;
 			SentPackets = new List<InformationPacket>();
 		}
 
@@ -27,12 +31,12 @@ namespace NTransitTest {
 
 		public bool TrySend(InformationPacket ip) {
 			SentPackets.Add(ip);
-			return true;
+			return ResponseToUseForTrySend;
 		}
 
 		public bool TrySend(InformationPacket ip, bool ignoreClosed) {
 			SentPackets.Add(ip);
-			return true;
+			return ResponseToUseForTrySend;
 		}
 
 		public void Close() {

@@ -6,7 +6,7 @@ namespace NTransitTest {
 	public class MockInputPort : IInputPort {
 		public string Name { get; set; }
 		public Component Process { get; set; }
-//		public bool Greedy { get; set; }
+		public bool Greedy { get; set; }
 		public int ConnectionCapacity { get; set; }
 		public bool Connected { get; set; }
 		public bool AllUpstreamPortsClosed { get; set; }
@@ -16,16 +16,18 @@ namespace NTransitTest {
 		public int QueuedPacketCount { get; set; }
 		public bool Closed { get; set; }
 
-		Action<IpOffer> receive;
-		public Action<IpOffer> Receive { 
-			get { return receive; } 
-			set { receive = value; } }
+		public Action<IpOffer> Receive { get; set; }
 		public Action<IpOffer> SequenceStart { get; set; }
 		public Action<IpOffer> SequenceEnd { get; set; }
 
+		// Exposed for testing /////////
 		public Queue<InformationPacket> Queue { get; set; }
+		public bool TickCalled { get; set; }
+		////////////////////////////////
 
-		public MockInputPort() {
+		public MockInputPort() : this(1, null) { }
+
+		public MockInputPort(int connectionCapacity, Component process) {
 			ConnectionCapacity = 1;
 			Connected = true;
 			AllUpstreamPortsClosed = false;
@@ -44,6 +46,7 @@ namespace NTransitTest {
 		}
 
 		public bool Tick() {
+			TickCalled = true;
 			DispatchOffer(new IpOffer(Queue.Dequeue()));
 			return false;
 		}
@@ -57,16 +60,24 @@ namespace NTransitTest {
 		void DispatchOffer(IpOffer offer) {
 			switch (offer.Type) {
 				case InformationPacket.PacketType.Data:
-					Receive(offer);
+					if (Receive != null) {
+						Receive(offer);
+					}
 					break;
 					case InformationPacket.PacketType.StartSequence:
-					SequenceStart(offer);
+					if (SequenceStart != null) {
+						SequenceStart(offer);
+					}
 					break;
 					case InformationPacket.PacketType.EndSequence:
-					SequenceEnd(offer);
+					if (SequenceEnd != null) {
+						SequenceEnd(offer);
+					}
 					break;
 					case InformationPacket.PacketType.Auto:
-					Receive(offer);
+					if (Receive != null) {
+						Receive(offer);
+					}
 					break;
 			}
 		}

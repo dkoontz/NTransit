@@ -1,0 +1,5 @@
+/Users/dkoontz/dev/Transit/bin/Debug/NTransit.dll.mdb
+/Users/dkoontz/dev/Transit/bin/Debug/NTransit.dll
+/Users/dkoontz/dev/Transit/obj/x86/Debug/NTransit.dll
+/Users/dkoontz/dev/Transit/obj/x86/Debug/NTransit.dll.mdb
+/Users/dkoontz/dev/Transit/bin/Debug/UnityEngine.dll

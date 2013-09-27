@@ -28,8 +28,10 @@ The component can choose to accept the packet or decline it which leaves the pac
 [InputPort("In")]
 [OutputPort("Out")]
 public class AddHeaderTag : Component {
-    public MyComponent(string name) : base(name) {
-        Receive["In"] = data => {
+    public MyComponent(string name) : base(name) { }
+
+	public override void Setup() {
+        InPorts["In"].Receive = data => {
             ip = data.Accept();
             var value = ip.ContentAs<string>();
             ip.Content = string.Format("<h1>{0}</h1>", value);
@@ -48,9 +50,11 @@ A slightly more complex version might be to allow the component to be told what 
 public class AddHeaderTag : Component {
     string tag;
 
-    public MyComponent(string name) : base(name) {
-        Receive["Tag"] = data => tag = data.Accept().ContentAs<string>();
-        Receive["In"] = data => {
+    public MyComponent(string name) : base(name) { }
+
+	public override void Setup() {
+        InPorts["Tag"].Receive = data => tag = data.Accept().ContentAs<string>();
+        InPorts["In"].Receive = data => {
             ip = data.Accept();
             var value = ip.ContentAs<string>();
             ip.Content = string.Format("<{0}>{1}</{0}>", tag, value);

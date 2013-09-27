@@ -14,12 +14,17 @@ Briefly put, Flow Based Programming is an architectural pattern by which you thi
 
 NTransit is a FBP runtime for C# 3.5 (.NET and Mono equivalents) and above.  NTransit aims to be usable in a variety of situations such as in desktop applications, server-side, and on mobile devices. To this end, NTransit does not make any assumptions about how your processes are scheduled, instead leaving that up to a pluggable scheduler which can be multi-threaded, single threaded, or some combination of the two, (for example using a thread pool).
 
-NTransit uses an event style model for notifying a component of incoming packets.  Ports are declared as attributes on the class and then you can declare event handlers for that port.  The events for an input port are Receive, SequenceStart, SequenceEnd.  There are also three events for the component as a whole: 
+NTransit uses an event style model for notifying a component of incoming packets.  Ports are declared as attributes on the class and accessed through the InPorts and OutPorts Dictionaries.  Input ports have three event handlers: Receive, SequenceStart, SequenceEnd.  There are also four event methods for the component as a whole: 
 
 ```C#
-public Action Start;
-public Func<bool> Update;
-public Action End;
+InPorts["MyInputPort"].Receive = data => // process packet
+InPorts["MyInputPort"].SequenceStart = data => // process start of sequence, this includes a unique sequence id
+InPorts["MyInputPort"].SequenceEnd = data => // process end of sequence, this includes the same id as the sequence start
+
+public abstract void Setup();
+protected virtual void Start();
+protected virtual bool Update();
+protected virtual void End();
 ```
 
 The component can choose to accept the packet or decline it which leaves the packet in the incoming port's connection.  Here is an example component that receives an IP on the In port, gets its content as a string, adds an &lt;h1&gt; around the string, and then forwards the IP to the Out port.

@@ -21,7 +21,7 @@ namespace NTransit {
 		}
 
 		protected override bool Update() {
-			while (HasCapacity("Out") && !reader.EndOfStream) {
+			while (OutPorts["Out"].HasCapacity && !reader.EndOfStream) {
 				SendNew("Out", reader.ReadLine()); 
 				if (reader.EndOfStream) Status = ProcessStatus.Terminated;
 			}

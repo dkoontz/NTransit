@@ -21,9 +21,13 @@ namespace NTransit {
 		protected class PendingPacket {
 			public string Port;
 			public InformationPacket Ip;
+			public int Index;
 
-			public PendingPacket(string port, InformationPacket ip) {
+			public PendingPacket(string port, InformationPacket ip) : this(port, -1, ip) { }
+
+			public PendingPacket(string port, int index, InformationPacket ip) {
 				Port = port;
+				Index = index;
 				Ip = ip;
 			}
 		}
@@ -60,6 +64,7 @@ namespace NTransit {
 				return hasAutoStartAttribute || allInputPortsHaveInitialData;
 			}
 		}
+
 		public bool HasInputPacketWaiting {
 			get {
 				foreach (var kvp in InPorts) {
@@ -77,6 +82,7 @@ namespace NTransit {
 
 		protected Dictionary<string, IInputPort> InPorts { get; private set; }
 		protected Dictionary<string, IOutputPort> OutPorts { get; private set; }
+		protected Dictionary<string, IArrayOutputPort> ArrayOutPorts { get; private set; }
 		protected Queue<PendingPacket> pendingPackets;
 		protected Dictionary<string, Stack<string>> sequenceIds;
 
@@ -88,6 +94,7 @@ namespace NTransit {
 			Status = ProcessStatus.Unstarted;
 			InPorts = new Dictionary<string, IInputPort>();
 			OutPorts = new Dictionary<string, IOutputPort>();
+			ArrayOutPorts = new Dictionary<string, IArrayOutputPort>();
 
 			CreatePorts();
 		}
@@ -106,14 +113,29 @@ namespace NTransit {
 			OutPorts[name] = port;
 		}
 
-		public void ConnectTo(string outPortName, Component process, string inPortName) {
+		public void SetArrayOutputPort(string name, IArrayOutputPort port) {
+			port.Name = name;
+			ArrayOutPorts[name] = port;
+		}
+
+		public void ConnectOutputPortTo(string outPortName, Component process, string inPortName) {
 			ValidateOutputPortName(outPortName);
 			process.AddConnectBetween(OutPorts[outPortName], inPortName);
 		}
 
-		public void ConnectTo(string outPortName, Component process, string inPortName, int capacity) {
-			ValidateOutputPortName(outPortName);
-			process.AddConnectBetween(OutPorts[outPortName], inPortName, capacity);
+		public void ConnectOutputPortTo(string outPortName, Component process, string inPortName, int capacity) {
+			ConnectOutputPortTo(outPortName, process, inPortName);
+			process.InPorts[inPortName].ConnectionCapacity = capacity;
+		}
+
+		public void ConnectArrayOutputPortTo(string outPortName, int portIndex, Component process, string inPortName) {
+			ValidateArrayOutputPortName(outPortName);
+			process.AddConnectionBetweenArrayOutputPortAndInputPort(ArrayOutPorts[outPortName], portIndex, inPortName);
+		}
+
+		public void ConnectArrayOutputPortTo(string outPortName, int portIndex, Component process, string inPortName, int capacity) {
+			ConnectArrayOutputPortTo(outPortName, portIndex, process, inPortName);
+			process.InPorts[inPortName].ConnectionCapacity = capacity;
 		}
 
 		public void SetInitialData(string portName, object value) {
@@ -145,17 +167,30 @@ namespace NTransit {
 				port.Close();
 			}
 
+			foreach (var port in ArrayOutPorts.Values) {
+				port.Close();
+			}
 		}
 
 		public bool Tick() {
 			PendingPacket firstPacket = null;
 			while (pendingPackets.Count > 0 && firstPacket != pendingPackets.Peek()) {
 				var pendingPacket = pendingPackets.Dequeue();
-				if (!OutPorts[pendingPacket.Port].ConnectedPortClosed && !OutPorts[pendingPacket.Port].TrySend(pendingPacket.Ip, true)) {
-					if (firstPacket == null) {
-						firstPacket = pendingPacket;
+				if (pendingPacket.Index == -1) {
+					if (!OutPorts[pendingPacket.Port].ConnectedPortClosed && !OutPorts[pendingPacket.Port].TrySend(pendingPacket.Ip, true)) {
+						if (firstPacket == null) {
+							firstPacket = pendingPacket;
+						}
+						pendingPackets.Enqueue(pendingPacket);
 					}
-					pendingPackets.Enqueue(pendingPacket);
+				}
+				else {
+					if (ArrayOutPorts[pendingPacket.Port].ConnectedPortOnIndexClosed(pendingPacket.Index) && !ArrayOutPorts[pendingPacket.Port].TrySend(pendingPacket.Ip, pendingPacket.Index, true)) {
+						if (firstPacket == null) {
+							firstPacket = pendingPacket;
+						}
+						pendingPackets.Enqueue(pendingPacket);
+					}
 				}
 			}
 
@@ -194,8 +229,16 @@ namespace NTransit {
 			Send(port, new InformationPacket(o));
 		}
 
+		protected void SendNew(string port, int index, object o) {
+			Send(port, index, new InformationPacket(o));
+		}
+
 		protected void SendNew(string port, object o, Dictionary<string, object> attributes) {
 			Send(port, new InformationPacket(o, attributes));
+		}
+
+		protected void SendNew(string port, int index, object o, Dictionary<string, object> attributes) {
+			Send(port, index, new InformationPacket(o, attributes));
 		}
 
 		protected void Send(string port, InformationPacket ip) {
@@ -205,9 +248,11 @@ namespace NTransit {
 			}
 		}
 
-		protected bool TrySend(string port, InformationPacket ip) {
-			ValidateOutputPortName(port);
-			return OutPorts[port].TrySend(ip);
+		protected void Send(string port, int index, InformationPacket ip) {
+			ValidateArrayOutputPortName(port);
+			if (!ArrayOutPorts[port].TrySend(ip, index)) {
+				pendingPackets.Enqueue(new PendingPacket(port, index, ip));
+			}
 		}
 
 		protected void SendSequenceStart(string port) {
@@ -217,19 +262,29 @@ namespace NTransit {
 			Send(port, new InformationPacket(id, InformationPacket.PacketType.StartSequence));
 		}
 
+		protected void SendSequenceStart(string port, int index) {
+			var id = Guid.NewGuid().ToString();
+			var portId = string.Format("{0}[{1}]", port, index);
+			if (!sequenceIds.ContainsKey(portId)) {
+				sequenceIds[port] = new Stack<string>();
+			}	
+			sequenceIds[portId].Push(id);
+			Send(port, index, new InformationPacket(id, InformationPacket.PacketType.StartSequence));
+		}
+
 		protected void SendSequenceEnd(string port) {
 			if (sequenceIds[port].Count == 0) throw new InvalidOperationException(string.Format("No sequences are active for '{0}.{1}'", Name, port));
 			Send(port, new InformationPacket(sequenceIds[port].Pop(), InformationPacket.PacketType.EndSequence));
 		}
 
-		protected bool OutportIsConnected(string port) {
-			return OutPorts[port].Connected;
+		protected void SendSequenceEnd(string port, int index) {
+			var portId = string.Format("{0}[{1}]", port, index);
+			if (sequenceIds[portId].Count == 0) {
+				throw new InvalidOperationException(string.Format("No sequences are active for '{0}.{1}[{2}]'", Name, port, index));
+			}
+			Send(port, index, new InformationPacket(sequenceIds[portId].Pop(), InformationPacket.PacketType.EndSequence));
 		}
-
-		protected bool HasCapacity(string port) {
-			return OutPorts[port].HasCapacity;
-		}
-
+	
 		protected void CreatePorts() {
 			foreach (var attribute in GetType().GetCustomAttributes(true)) {
 				if (attribute is InputPortAttribute) {
@@ -260,6 +315,20 @@ namespace NTransit {
 					}
 					var port = Activator.CreateInstance(type, new object[] { this }) as IOutputPort;
 					SetOutputPort(outPort.Name, port);
+				}
+				else if (attribute is ArrayOutputPortAttribute) {
+					var arrayOutPort = attribute as ArrayOutputPortAttribute;
+					var type = typeof(StandardArrayOutputPort);
+					if (arrayOutPort.Type != null) {
+						if (typeof(IArrayOutputPort).IsAssignableFrom(arrayOutPort.Type)) {
+							type = arrayOutPort.Type;
+						}
+						else {
+							throw new ArgumentException(string.Format("The ArrayOutputPort type '{0}' specified on port '{1}' of component '{2}' does not implement IArrayOutputPort", arrayOutPort.Type, arrayOutPort.Name, GetType()));
+						}
+					}
+					var port = Activator.CreateInstance(type, new object[] { this }) as IArrayOutputPort;
+					SetArrayOutputPort(arrayOutPort.Name, port);
 				}
 			}
 		}
@@ -294,6 +363,13 @@ namespace NTransit {
 					anyConnected = true;
 				}
 			}
+			foreach (var port in ArrayOutPorts.Values) {
+				foreach(var index in port.ConnectedIndicies) {
+					if (port.ConnectedOn(index)) {
+						anyConnected = true;
+					}
+				}
+			}
 			if (!anyConnected) {
 				return false;
 			}
@@ -302,6 +378,14 @@ namespace NTransit {
 				foreach (var port in OutPorts.Values) {
 					if (port.Connected && !port.ConnectedPortClosed) {
 						allClosed = false;
+					}
+				}
+
+				foreach (var port in ArrayOutPorts.Values) {
+					foreach(var index in port.ConnectedIndicies) {
+						if (port.ConnectedOn(index) && !port.ConnectedPortOnIndexClosed(index)) {
+							allClosed = false;
+						}
 					}
 				}
 				return allClosed;
@@ -316,6 +400,10 @@ namespace NTransit {
 			if (!OutPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no out port named '{0}.{1}'", Name, portName));
 		}
 
+		protected void ValidateArrayOutputPortName(string portName) {
+			if (!ArrayOutPorts.ContainsKey(portName)) throw new ArgumentException(string.Format("There is no array out port named '{0}.{1}'", Name, portName));
+		}
+
 		void AddConnectBetween(IOutputPort outPort, string inputPortName) {
 			ValidateInputPortName(inputPortName);
 			var inPort = InPorts[inputPortName];
@@ -323,9 +411,10 @@ namespace NTransit {
 			inPort.NotifyOfConnection(outPort);
 		}
 
-		void AddConnectBetween(IOutputPort port, string inputPortName, int capacity) {
-			AddConnectBetween(port, inputPortName);
-			InPorts[inputPortName].ConnectionCapacity = capacity;
+		void AddConnectionBetweenArrayOutputPortAndInputPort(IArrayOutputPort outPort, int portIndex, string inPortName) {
+			ValidateInputPortName(inPortName);
+			var inPort = InPorts[inPortName];
+			outPort.ConnectPortIndexTo(portIndex, inPort);
 		}
 	}
 }

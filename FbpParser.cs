@@ -55,7 +55,7 @@ namespace NTransit {
 
 					var sender = CreateOrRetrieveComponentFromString(senderParts[0].Trim(), i, scheduler);
 					var senderPort = senderParts[1].Trim();
-					sender.ConnectTo(senderPort, receiver, receiverPort);
+					sender.ConnectOutputPortTo(senderPort, receiver, receiverPort);
 				}
 				else if (Regex.IsMatch(senderText, INITIAL_PASSED_IN_DATA)) {
 					var match = Regex.Match(senderText, INITIAL_PASSED_IN_DATA);

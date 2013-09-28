@@ -71,6 +71,9 @@
     <Compile Include="IReadOnlyCollection.cs" />
     <Compile Include="IInputPort.cs" />
     <Compile Include="IOutputPort.cs" />
+    <Compile Include="StandardArrayOutputPort.cs" />
+    <Compile Include="IArrayOutputPort.cs" />
+    <Compile Include="ArrayOutputPortAttribute.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

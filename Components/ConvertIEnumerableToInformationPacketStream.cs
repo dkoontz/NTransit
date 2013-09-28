@@ -22,7 +22,7 @@ namespace NTransit {
 		protected override bool Update() {
 			base.Update();
 
-			while (HasCapacity("Out") && Status == ProcessStatus.Active) {
+			while (OutPorts["Out"].HasCapacity && Status == ProcessStatus.Active) {
 				SendNew("Out", iterator.Current);
 				if (!iterator.MoveNext()) {
 					Status = ProcessStatus.Terminated;

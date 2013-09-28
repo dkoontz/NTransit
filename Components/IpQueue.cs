@@ -18,7 +18,7 @@ namespace NTransit {
 		}
 
 		protected override bool Update() {
-			if (queue.Count > 0 && TrySend("Out", queue.Peek())) {
+			if (queue.Count > 0 && OutPorts["Out"].TrySend(queue.Peek())) {
 				queue.Dequeue();
 				return true;
 			}

@@ -83,7 +83,7 @@ Types are only declared the first time they are encountered, so the second use o
 * bool
 
 ### Example projects
-* [Space Invaders FBP](https://github.com/dkoontz/ntransit-spaceinvaders) - an example game using the [Unity](http://unity3d.com) game engine]
+* [Space Invaders FBP](https://github.com/dkoontz/ntransit-spaceinvaders) - an example game using the [Unity](http://unity3d.com) game engine
 
 ### Related projects
 * [NoFlo visual editor](https://github.com/noflo/noflo-ui)

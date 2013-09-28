@@ -52,8 +52,10 @@ namespace NTransit {
 						}
 						readOnlyWrapper = new ReadOnlyWrapper<object>(values);
 					}
-					
-					SendNew("Out", readOnlyWrapper);
+
+					if (readOnlyWrapper.Count > 0) {
+						SendNew("Out", readOnlyWrapper);
+					}
 				}
 			};
 		}

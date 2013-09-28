@@ -10,7 +10,7 @@ namespace NTransitTest {
 		public int ConnectionCapacity { get; set; }
 		public bool Connected { get; set; }
 		public bool AllUpstreamPortsClosed { get; set; }
-		public bool HasPacketWaiting { get { return Queue.Count > 0; } }
+		public bool HasPacketWaiting { get { return ReceivedPackets.Count > 0; } }
 		public bool HasCapacity { get; set; }
 		public bool HasInitialData { get; set; }
 		public int QueuedPacketCount { get; set; }
@@ -21,7 +21,7 @@ namespace NTransitTest {
 		public Action<IpOffer> SequenceEnd { get; set; }
 
 		// Exposed for testing /////////
-		public Queue<InformationPacket> Queue { get; set; }
+		public Queue<InformationPacket> ReceivedPackets { get; set; }
 		public bool TickCalled { get; set; }
 		////////////////////////////////
 
@@ -33,21 +33,21 @@ namespace NTransitTest {
 			AllUpstreamPortsClosed = false;
 			HasCapacity = true;
 			Closed = false;
-			Queue = new Queue<InformationPacket>();
+			ReceivedPackets = new Queue<InformationPacket>();
 		}
 
 		public void SetInitialData(InformationPacket ip) {
-			Queue.Enqueue(ip);
+			ReceivedPackets.Enqueue(ip);
 		}
 
 		public bool TrySend(InformationPacket ip) {
-			Queue.Enqueue(ip);
+			ReceivedPackets.Enqueue(ip);
 			return true;
 		}
 
 		public bool Tick() {
 			TickCalled = true;
-			DispatchOffer(new IpOffer(Queue.Dequeue()));
+			DispatchOffer(new IpOffer(ReceivedPackets.Dequeue()));
 			return false;
 		}
 

@@ -284,6 +284,14 @@ namespace NTransit {
 			}
 			Send(port, index, new InformationPacket(sequenceIds[portId].Pop(), InformationPacket.PacketType.EndSequence));
 		}
+
+		protected void SendAuto(string port) {
+			Send(port, new InformationPacket(null, InformationPacket.PacketType.Auto));
+		}
+
+		protected void SendAuto(string port, int index) {
+			Send(port, index, new InformationPacket(null, InformationPacket.PacketType.Auto));
+		}
 	
 		protected void CreatePorts() {
 			foreach (var attribute in GetType().GetCustomAttributes(true)) {

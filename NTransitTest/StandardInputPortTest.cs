@@ -55,11 +55,26 @@ namespace NTransitTest {
 		}
 
 		[Test]
-		public void Should_offer_one_IPs_if_queued_when_Tick_is_called() {
+		public void Should_offer_one_IP_if_queued_when_Tick_is_called() {
 			var port = new StandardInputPort(1, null);
 			var timesCalled = 0;
 			port.TrySend(new InformationPacket(null));
 			port.Receive = data => ++timesCalled;
+			port.Tick();
+			timesCalled.ShouldEqual(1);
+		}
+
+		[Test]
+		public void Should_offer_only_one_IP_if_multiple_are_queued_and_Greedy_is_false_when_Tick_is_called() {
+			var port = new StandardInputPort(1, null);
+			var timesCalled = 0;
+			port.TrySend(new InformationPacket(null));
+			port.TrySend(new InformationPacket(null));
+			port.TrySend(new InformationPacket(null));
+			port.Receive = data => {
+				++timesCalled;
+				data.Accept();
+			};
 			port.Tick();
 			timesCalled.ShouldEqual(1);
 		}
@@ -82,8 +97,25 @@ namespace NTransitTest {
 		}
 
 		[Test]
+		public void Should_stop_offering_IPs_when_Greedy_is_true_and_Reciever_does_not_accept_packet() {
+			var port = new StandardInputPort(4, null);
+			port.Greedy = true;
+			var timesCalled = 0;
+			port.TrySend(new InformationPacket(null));
+			port.TrySend(new InformationPacket(null));
+			port.TrySend(new InformationPacket(null));
+			port.TrySend(new InformationPacket(null));
+			port.Receive = data => {
+				++timesCalled;
+			};
+			port.Tick();
+			timesCalled.ShouldEqual(1);
+		}
+
+		[Test]
 		public void Should_return_false_from_Tick_when_no_packets_are_sent() {
 			var port = new StandardInputPort(1, null);
+			port.Receive = data => data.Accept();
 			port.Tick().ShouldBeFalse();
 		}
 

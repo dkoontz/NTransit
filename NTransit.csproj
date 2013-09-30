@@ -74,6 +74,7 @@
     <Compile Include="StandardArrayOutputPort.cs" />
     <Compile Include="IArrayOutputPort.cs" />
     <Compile Include="ArrayOutputPortAttribute.cs" />
+    <Compile Include="Components\SendActivation.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

@@ -17,11 +17,7 @@ namespace NTransit {
 			InPorts["Object"].Receive = data => {
 				var ip = data.Accept();
 				var target = ip.Content;
-				foreach (var field in target.GetType().GetFields()) {
-					if (field.Name == fieldName) {
-						field.SetValue(target, value);
-					}
-				}
+				target.GetType().GetField(fieldName).SetValue(target, value);
 			};
 		}
 	}

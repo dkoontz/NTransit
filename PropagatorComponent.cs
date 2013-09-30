@@ -10,8 +10,5 @@ namespace NTransit {
 			InPorts["In"].SequenceStart = data => Send("Out", data.Accept());
 			InPorts["In"].SequenceEnd = data => Send("Out", data.Accept());
 		}
-//			SequenceStart["In"] = data => Send("Out", data.Accept());
-//			SequenceEnd["In"] = data => Send("Out", data.Accept());
-
 	}
 }

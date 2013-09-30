@@ -6,13 +6,14 @@ using System.Collections.Generic;
 namespace NTransit {
 	public static class FbpParser {
 		const string COMMENT = @"^#.*$";
-		const string COMPONENT_DECLARATION = @"^[A-Za-z]+(\w|\(|\)|_)*\.[A-Za-z]+(\w|\(|\)|_)*$";
+		const string COMPONENT_DECLARATION = @"^[A-Za-z]+(\w|\(|\)|_)*\.[A-Za-z]+(\w|\(|\)|_)*(\[.+?\])*$";
 		const string COMPONENT_WITH_TYPE_DECLARATION = @"(\w+)\((\w+)\)";
 		const string INITIAL_BOOL_DATA = @"^(true|false)$";
 		const string INITIAL_STRING_DATA = @"^('|"")(.+)\1$";
 		const string INITIAL_FLOAT_DATA = @"^\d+\.\d+$";
 		const string INITIAL_INT_DATA = @"^\d+$";
 		const string INITIAL_PASSED_IN_DATA = @"^\<(.+)\>$";
+		const string ARRAY_PORT_INDEX = @"^(.+?)\[(.+?)\]$";
 
 		static Dictionary<string, Component> components;
 
@@ -55,7 +56,13 @@ namespace NTransit {
 
 					var sender = CreateOrRetrieveComponentFromString(senderParts[0].Trim(), i, scheduler);
 					var senderPort = senderParts[1].Trim();
-					sender.ConnectOutputPortTo(senderPort, receiver, receiverPort);
+					if (Regex.IsMatch(senderPort, ARRAY_PORT_INDEX)) {
+						var match = Regex.Match(senderPort, ARRAY_PORT_INDEX);
+						sender.ConnectArrayOutputPortTo(match.Groups[1].Value, int.Parse(match.Groups[2].Value), receiver, receiverPort);
+					}
+					else {
+						sender.ConnectOutputPortTo(senderPort, receiver, receiverPort);
+					}
 				}
 				else if (Regex.IsMatch(senderText, INITIAL_PASSED_IN_DATA)) {
 					var match = Regex.Match(senderText, INITIAL_PASSED_IN_DATA);
@@ -114,7 +121,7 @@ namespace NTransit {
 					foreach (var assembly in assemblies) {
 						var types = assembly.GetTypes();
 						foreach (var type in types) {
-							if (type.Name.EndsWith(typeName)) {
+							if (type.Name == typeName) {
 								resolvedType = type;
 							}
 						}

@@ -62,7 +62,7 @@ namespace NTransit {
 						queue.Enqueue(ip);
 						return true;
 					}
-					throw new ArgumentException(string.Format("IP content of type {0} is not valid due to the Input port's type restriction, valid types are {1}", ip.Content.GetType(), ValidTypeDescription));
+					throw new ArgumentException(string.Format("IP content of type {0} received on {1}.{2} is not valid due to the type restriction for Input port's type restriction, valid types are {3}", ip.Content.GetType(), Process.Name, Name, ValidTypeDescription));
 				}
 				
 				return false;

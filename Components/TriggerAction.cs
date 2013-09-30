@@ -17,7 +17,7 @@ namespace NTransit {
 				var target = ip.Content;
 				var action = target.GetType().GetMethod(actionName);
 				if (action == null) {
-					throw new ArgumentException(string.Format("The type '{0}' does not contain a method named '{1}'", target.GetType(), actionName));
+					throw new ArgumentException(string.Format("The type '{0}' received by '{1}' does not contain a method named '{2}'", target.GetType(), Name, actionName));
 				}
 
 				try {
@@ -25,10 +25,12 @@ namespace NTransit {
 					actionDelegate();
 				}
 				catch(ArgumentException) {
-					throw new ArgumentException(string.Format("The target action '{0}' is not a System.Action", actionName));
+					throw new ArgumentException(string.Format("The target action '{0}' specified for '{1}' is not a System.Action", actionName, Name));
 				}
 
-				Send("Out", ip);
+				if (OutPorts["Out"].Connected) {
+					Send("Out", ip);
+				}
 			};
 		}
 	}

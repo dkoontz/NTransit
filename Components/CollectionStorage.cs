@@ -17,13 +17,14 @@ namespace NTransit {
 		public CollectionStorage(string name) : base(name) {
 			valuesToRemove = new Queue<object>();
 			valuesToAdd = new Queue<object>();
+			values = new List<object>();
 		}
 
 		public override void Setup() {
 			InPorts["ICollection"].Receive = data => {
 				var collection = data.Accept().ContentAs<IEnumerable<object>>();
-				values = new List<object>();
-				
+				values.Clear();
+
 				foreach (var value in collection) {
 					values.Add(value);
 				}
@@ -40,22 +41,20 @@ namespace NTransit {
 			};
 			
 			InPorts["Send"].Receive = data =>  {
-				if (values != null) {
-					data.Accept();
-					if (valuesToRemove.Count > 0 || valuesToAdd.Count > 0) {
-						while (valuesToRemove.Count > 0) {
-							values.Remove(valuesToRemove.Dequeue());
-						}
-						
-						while (valuesToAdd.Count > 0) {
-							values.Remove(valuesToAdd.Dequeue());
-						}
-						readOnlyWrapper = new ReadOnlyWrapper<object>(values);
+				data.Accept();
+				if (valuesToRemove.Count > 0 || valuesToAdd.Count > 0) {
+					while (valuesToRemove.Count > 0) {
+						values.Remove(valuesToRemove.Dequeue());
 					}
 
-					if (readOnlyWrapper.Count > 0) {
-						SendNew("Out", readOnlyWrapper);
+					while (valuesToAdd.Count > 0) {
+						values.Add(valuesToAdd.Dequeue());
 					}
+					readOnlyWrapper = new ReadOnlyWrapper<object>(values);
+				}
+
+				if (readOnlyWrapper != null && readOnlyWrapper.Count > 0) {
+					SendNew("Out", readOnlyWrapper);
 				}
 			};
 		}

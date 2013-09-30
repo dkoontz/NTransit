@@ -42,7 +42,10 @@ namespace NTransit {
 				else {
 					throw new ArgumentException(string.Format("IP content was {0}, but must be an IEnumerable", ip.Content.GetType()));
 				}
-				Send("Original", ip);
+
+				if (OutPorts["Original"].Connected) {
+					Send("Original", ip);
+				}
 			};
 		}
 	}
